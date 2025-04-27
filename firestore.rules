@@ -1,0 +1,72 @@
+// Firestore Security Rules with Unrestricted Admin Access
+// These rules give admin users full access while restricting non-admin users
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.admin == true ||
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN');
+    }
+
+    // IMPORTANT: This rule gives admin users unrestricted access to ALL collections
+    // Admin users can read, write, update, and delete any document in the database
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Rules for non-admin users below
+    // These rules will only be applied if the user is not an admin
+
+    // Users collection - for non-admin users
+    match /users/{userId} {
+      // Users can read and update their own data
+      allow read, update: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated();
+      // Only admins can delete users (covered by the admin rule above)
+    }
+
+    // Products collection - for non-admin users
+    match /products/{productId} {
+      // Anyone can read products
+      allow read: if true;
+      // Only admins can create, update, or delete products (covered by the admin rule above)
+    }
+
+    // Orders collection - for non-admin users
+    match /orders/{orderId} {
+      // Users can read and create their own orders
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Only admins can update or delete orders (covered by the admin rule above)
+    }
+
+    // Categories collection - for non-admin users
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+      // Only admins can create, update, or delete categories (covered by the admin rule above)
+    }
+
+    // Site settings - for non-admin users
+    match /site-settings/{document=**} {
+      // Anyone can read site settings
+      allow read: if true;
+      // Only admins can update site settings (covered by the admin rule above)
+    }
+
+    // Customers collection - for non-admin users
+    match /customers/{customerId} {
+      // Customers can read their own data
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Only admins can create, update, or delete customers (covered by the admin rule above)
+    }
+  }
+}

@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // DEVELOPMENT MODE: Allow unrestricted access (DISABLED)
+    // WARNING: These rules are insecure and should only be used during development
+    // IMPORTANT: Replace these rules with proper security rules before deploying to production
+    /*
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+    */
+
+    // PRODUCTION RULES
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /products/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Site settings images
+    match /site-settings/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
