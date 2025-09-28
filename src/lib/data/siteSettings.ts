@@ -138,23 +138,8 @@ export const DEFAULT_HOMEPAGE_SECTIONS: SiteSection[] = [
     subtitle: 'Real experiences from our community',
     backgroundColor: '#ffffff',
     textColor: '#1e293b',
-    items: [
-      {
-        id: 'testimonial-1',
-        title: 'Sarah M.',
-        description: 'The quality of the clothes is exceptional. I love how each piece is designed to be both stylish and sustainable.',
-      },
-      {
-        id: 'testimonial-2',
-        title: 'James K.',
-        description: 'Finally, a brand that truly understands inclusive fashion. The fits are perfect for everyone.',
-      },
-      {
-        id: 'testimonial-3',
-        title: 'Emma R.',
-        description: 'The customer service is outstanding, and the clothes are even better. My new go-to fashion destination!',
-      }
-    ]
+    items: []
+    // TODO: Replace with real testimonials from database
   },
   {
     id: 'newsletter',

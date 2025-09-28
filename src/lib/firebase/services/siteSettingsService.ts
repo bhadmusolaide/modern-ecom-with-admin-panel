@@ -3,6 +3,7 @@ import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
   collection, getDocs, query, limit
 } from 'firebase/firestore';
+import { DEFAULT_HOMEPAGE_SECTIONS } from '@/lib/data/siteSettings';
 
 // Collection reference
 const SETTINGS_COLLECTION = 'siteSettings';
@@ -191,7 +192,7 @@ export const createDefaultSiteSettings = async (): Promise<SiteSettings> => {
       footer: null,
       faqItems: [],
       faqEnabled: false,
-      homepageSections: [],
+      homepageSections: DEFAULT_HOMEPAGE_SECTIONS,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

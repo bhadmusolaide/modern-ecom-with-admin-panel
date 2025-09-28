@@ -23,8 +23,10 @@ const Testimonials: React.FC<TestimonialsProps> = ({ sectionData }) => {
   const testimonials: Testimonial[] = [
     {
       id: 1,
-      name: 'Alex Johnson',
+      name: 'Alex Chen',
       role: 'Fashion Blogger',
+      // TODO: Remove fake testimonials
+      // TODO: Remove fake testimonials
       avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
       content: 'OMJ has completely transformed my wardrobe. The quality of their pieces is exceptional, and I love how versatile everything is. I can mix and match their items for countless outfit combinations.',
       rating: 5,

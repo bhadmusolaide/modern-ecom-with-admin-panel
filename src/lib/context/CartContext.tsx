@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { useToast } from './ToastContext';
 import { useFirebaseAuth } from '@/lib/firebase';
 import { Product, OrderItem, ShippingAddress, ShippingMethod, PaymentMethod, PaymentStatus } from '@/lib/types';
@@ -94,7 +94,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>(initialCart);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingToasts, setPendingToasts] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' }[]>([]);
   const { showToast } = useToast();
+  const isProcessingToasts = useRef(false);
 
   // Load cart from local storage on mount
   useEffect(() => {
@@ -121,6 +123,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('cart', JSON.stringify(cart));
     }
   }, [cart, isLoading]);
+
+  // Handle pending toasts after render is complete
+  useEffect(() => {
+    if (pendingToasts.length > 0 && !isProcessingToasts.current) {
+      isProcessingToasts.current = true;
+      pendingToasts.forEach(toast => {
+        showToast(toast.message, toast.type);
+      });
+      setPendingToasts([]);
+      isProcessingToasts.current = false;
+    }
+  }, [pendingToasts, showToast]);
 
   // Calculate cart totals whenever items change
   const calculateTotals = (items: CartItem[]): Cart => {
@@ -171,23 +185,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
         newItems = [...prevCart.items, newItem];
       }
 
-      showToast(`Added ${quantity} ${product.name} to cart`, 'success');
+      // Add toast to pending queue instead of calling immediately
+      setPendingToasts(prev => [...prev, { message: `Added ${quantity} ${product.name} to cart`, type: 'success' }]);
       return calculateTotals(newItems);
     });
   };
 
   // Remove item from cart
   const removeFromCart = (itemId: string) => {
+    let itemToRemove: CartItem | undefined;
     setCart(prevCart => {
-      const itemToRemove = prevCart.items.find(item => item.id === itemId);
+      itemToRemove = prevCart.items.find(item => item.id === itemId);
       const newItems = prevCart.items.filter(item => item.id !== itemId);
-
-      if (itemToRemove) {
-        showToast(`Removed ${itemToRemove.name} from cart`, 'info');
-      }
-
       return calculateTotals(newItems);
     });
+    if (itemToRemove) {
+      setPendingToasts(prev => [...prev, { message: `Removed ${itemToRemove!.name} from cart`, type: 'info' }]);
+    }
   };
 
   // Update item quantity
@@ -220,7 +234,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Clear cart
   const clearCart = () => {
     setCart(initialCart);
-    showToast('Cart has been cleared', 'info');
+    setPendingToasts(prev => [...prev, { message: 'Cart has been cleared', type: 'info' }]);
   };
 
   // Checkout function
@@ -229,7 +243,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const checkout = async (checkoutData: CheckoutData) => {
     try {
       if (cart.items.length === 0) {
-        showToast('Your cart is empty', 'error');
+        setPendingToasts(prev => [...prev, { message: 'Your cart is empty', type: 'error' }]);
         return { success: false, error: 'Your cart is empty' };
       }
 
@@ -347,7 +361,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        showToast(`Checkout failed: ${errorData.error || 'Unknown error'}`, 'error');
+        setPendingToasts(prev => [...prev, { message: `Checkout failed: ${errorData.error || 'Unknown error'}`, type: 'error' }]);
         return {
           success: false,
           error: errorData.error || 'Failed to create order'
@@ -359,7 +373,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Clear the cart after successful checkout
       clearCart();
 
-      showToast('Order placed successfully!', 'success');
+      setPendingToasts(prev => [...prev, { message: 'Order placed successfully!', type: 'success' }]);
 
       return {
         success: true,
@@ -368,7 +382,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       };
     } catch (error) {
       console.error('Error during checkout:', error);
-      showToast('An error occurred during checkout', 'error');
+      setPendingToasts(prev => [...prev, { message: 'An error occurred during checkout', type: 'error' }]);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

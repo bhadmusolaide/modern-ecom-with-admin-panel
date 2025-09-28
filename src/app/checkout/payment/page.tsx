@@ -37,7 +37,7 @@ export default function PaymentPage() {
 function PaymentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useFirebaseAuth();
+  const { user, getIdToken } = useFirebaseAuth();
   const { showToast } = useToast();
   const { clearCart } = useCart();
 
@@ -50,6 +50,7 @@ function PaymentPageContent() {
   const [clientSecret, setClientSecret] = useState<string>('');
   const [paymentIntentId, setPaymentIntentId] = useState<string>('');
   const [selectedSavedMethod, setSelectedSavedMethod] = useState<string>('');
+  const [isPaymentBypassed, setIsPaymentBypassed] = useState<boolean>(false);
 
   // Fetch the order details
   useEffect(() => {
@@ -58,35 +59,139 @@ function PaymentPageContent() {
       return;
     }
 
-    const fetchOrder = async () => {
+    const fetchOrder = async (retryCount = 0) => {
       try {
         setIsLoading(true);
 
-        const response = await fetch(`/api/orders/${orderId}`);
+        // Get authentication token if user is logged in
+        let headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+
+        if (user) {
+          try {
+            const token = await getIdToken();
+            if (token) {
+              headers['Authorization'] = `Bearer ${token}`;
+            }
+          } catch (tokenError) {
+            console.warn('Could not get auth token:', tokenError);
+          }
+        }
+
+        const response = await fetch(`/api/orders/${orderId}`, {
+          headers,
+        });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch order');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Order fetch failed:', response.status, errorData);
+
+          // If it's a 404 and we haven't retried yet, wait and retry once
+          if (response.status === 404 && retryCount === 0) {
+            console.log('Order not found, retrying in 2 seconds...');
+            setTimeout(() => fetchOrder(1), 2000);
+            return;
+          }
+
+          // If it's a 403 (permission denied), try to get order from localStorage as fallback
+          if (response.status === 403) {
+            console.log('Permission denied, trying localStorage fallback');
+            const savedOrderData = localStorage.getItem('lastOrderData');
+            if (savedOrderData) {
+              try {
+                const orderData = JSON.parse(savedOrderData);
+                console.log('Found order in localStorage:', orderData);
+                setOrder(orderData);
+
+                // Show a warning that we're using cached data
+                showToast('Using cached order data due to access restrictions', 'warning');
+
+                // Create a payment intent for the order
+                try {
+                  // Get authentication token for payment intent creation
+                  let authHeaders: HeadersInit = {
+                    'Content-Type': 'application/json',
+                  };
+        
+                  if (user) {
+                    try {
+                      const token = await getIdToken();
+                      if (token) {
+                        authHeaders['Authorization'] = `Bearer ${token}`;
+                      }
+                    } catch (tokenError) {
+                      console.warn('Could not get auth token for payment intent:', tokenError);
+                    }
+                  }
+        
+                  const { clientSecret, paymentIntentId } = await createPaymentIntent(orderData, authHeaders);
+                  setClientSecret(clientSecret);
+                  setPaymentIntentId(paymentIntentId);
+                  if (clientSecret.startsWith('dummy_client_secret_')) {
+                    setIsPaymentBypassed(true);
+                  }
+                } catch (paymentError) {
+                  console.error('Error creating payment intent:', paymentError);
+                  showToast('Failed to initialize payment', 'error');
+                }
+                return;
+              } catch (parseError) {
+                console.error('Error parsing saved order data:', parseError);
+              }
+            }
+          }
+
+          throw new Error(`Failed to fetch order: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('Order fetched successfully:', data);
+
+        if (!data.order) {
+          throw new Error('Order data not found in response');
+        }
+
         setOrder(data.order);
 
         // Create a payment intent for the order
-        if (data.order) {
-          const { clientSecret, paymentIntentId } = await createPaymentIntent(data.order);
+        try {
+          // Get authentication token for payment intent creation
+          let authHeaders: HeadersInit = {
+            'Content-Type': 'application/json',
+          };
+
+          if (user) {
+            try {
+              const token = await getIdToken();
+              if (token) {
+                authHeaders['Authorization'] = `Bearer ${token}`;
+              }
+            } catch (tokenError) {
+              console.warn('Could not get auth token for payment intent:', tokenError);
+            }
+          }
+
+          const { clientSecret, paymentIntentId } = await createPaymentIntent(data.order, authHeaders);
           setClientSecret(clientSecret);
           setPaymentIntentId(paymentIntentId);
+          if (clientSecret.startsWith('dummy_client_secret_')) {
+            setIsPaymentBypassed(true);
+          }
+        } catch (paymentError) {
+          console.error('Error creating payment intent:', paymentError);
+          showToast('Failed to initialize payment', 'error');
         }
       } catch (error) {
         console.error('Error fetching order:', error);
-        showToast('Failed to load order details', 'error');
+        showToast(`Failed to load order details: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchOrder();
-  }, [orderId, router, showToast]);
+  }, [orderId, router, showToast, user, getIdToken]);
 
   // Handle saved payment method selection
   const handleSavedMethodSelect = (paymentMethodId: string) => {
@@ -119,17 +224,30 @@ function PaymentPageContent() {
   }
 
   // Show error if order not found
-  if (!order) {
+  if (!order && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900">Order Not Found</h1>
-            <p className="mt-2 text-gray-600">We couldn't find the order you're looking for.</p>
-            <div className="mt-6">
+            <p className="mt-2 text-gray-600">
+              We couldn't find the order you're looking for. This might be because:
+            </p>
+            <ul className="mt-4 text-left text-sm text-gray-600 max-w-md mx-auto">
+              <li>• The order was just created and is still processing</li>
+              <li>• There was an issue with the order creation</li>
+              <li>• The order ID is incorrect</li>
+            </ul>
+            <div className="mt-6 space-x-4">
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                Try Again
+              </button>
               <Link
                 href="/checkout"
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 Return to Checkout
               </Link>
@@ -164,7 +282,7 @@ function PaymentPageContent() {
           {/* Payment section */}
           <div className="lg:col-span-2 space-y-8">
             {/* Saved payment methods (for logged-in users) */}
-            {user && (
+            {user && !isPaymentBypassed && (
               <div className="bg-white p-6 rounded-lg shadow-sm">
                 <SavedPaymentMethods
                   onSelect={handleSavedMethodSelect}
@@ -174,12 +292,30 @@ function PaymentPageContent() {
             )}
 
             {/* Unified payment form */}
-            <UnifiedPaymentForm
-              order={order}
-              clientSecret={clientSecret}
-              onSuccess={handlePaymentSuccess}
-              onError={handlePaymentError}
-            />
+            {order && !isPaymentBypassed && (
+              <UnifiedPaymentForm
+                order={order}
+                clientSecret={clientSecret}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            )}
+
+            {/* Bypass Payment Section */}
+            {order && isPaymentBypassed && (
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Payment Bypassed (Development Mode)</h2>
+                <p className="text-gray-600 mb-4">
+                  Payment processing is currently bypassed for development purposes. Click the button below to complete your order.
+                </p>
+                <button
+                  onClick={handlePaymentSuccess} // Directly call handlePaymentSuccess
+                  className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Complete Order
+                </button>
+              </div>
+            )}
 
             {/* Security notice */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-100">
@@ -200,7 +336,7 @@ function PaymentPageContent() {
           {/* Order summary */}
           <div className="lg:col-span-1">
             <div className="bg-white p-6 rounded-lg shadow-sm sticky top-6">
-              <OrderSummary order={order} />
+              {order && <OrderSummary order={order} />}
             </div>
           </div>
         </div>

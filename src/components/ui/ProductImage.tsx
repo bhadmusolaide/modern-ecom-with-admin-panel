@@ -51,22 +51,43 @@ export default function ProductImage({
     onLoad?.();
   };
 
+  // Check if we should use fill mode (when className contains absolute positioning)
+  const shouldUseFill = className?.includes('absolute') || className?.includes('inset-0');
+
   return (
-    <div className={`relative ${className}`} style={{ width, height }}>
+    <div className={`relative overflow-hidden ${shouldUseFill ? '' : 'w-full h-full'}`} style={{ width, height }}>
       {!loaded && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
           <div className="animate-pulse w-12 h-12 rounded-full bg-gray-200"></div>
         </div>
       )}
 
-      <img
-        src={imageSrc}
-        alt={alt}
-        className={`w-full h-full object-cover ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
-        onError={handleError}
-        onLoad={handleLoad}
-        style={{ objectFit: 'cover' }}
-      />
+      {shouldUseFill ? (
+        <Image
+          src={imageSrc}
+          alt={alt}
+          fill
+          className={`${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          style={{ objectFit: 'cover' }}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          onError={handleError}
+          onLoad={handleLoad}
+          priority={false}
+        />
+      ) : (
+        <Image
+          src={imageSrc}
+          alt={alt}
+          width={width || 400}
+          height={height || 400}
+          className={`w-full h-full ${loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+          style={{ objectFit: 'cover' }}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          onError={handleError}
+          onLoad={handleLoad}
+          priority={false}
+        />
+      )}
 
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400">

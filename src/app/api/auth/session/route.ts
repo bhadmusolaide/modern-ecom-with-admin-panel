@@ -91,6 +91,11 @@ export async function POST(request: NextRequest) {
       });
     } catch (verifyError) {
       console.error('Invalid token provided:', verifyError);
+      console.error('Token details:', {
+        tokenLength: token?.length,
+        tokenPrefix: token?.substring(0, 20) + '...',
+        errorCode: verifyError instanceof Error ? verifyError.message : 'Unknown error'
+      });
       return createErrorResponse('Invalid authentication token', 401);
     }
   } catch (error) {

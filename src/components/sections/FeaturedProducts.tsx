@@ -36,11 +36,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ sectionData }) => {
         setProducts(featuredProducts || []);
 
         // If no products were found, we'll handle this in the UI
-        if (!featuredProducts || featuredProducts.length === 0) {
-          console.log('No featured products found in database');
-        }
       } catch (err) {
-        console.error('Error fetching featured products:', err);
         setError('Failed to load featured products. Please try again later.');
         setProducts([]);
       } finally {

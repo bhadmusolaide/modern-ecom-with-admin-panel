@@ -39,13 +39,21 @@ export default function OrderHistoryPage() {
 
   // Fetch user's orders
   useEffect(() => {
+    console.log('Account Orders: useEffect triggered with:', {
+      authLoading,
+      user: user ? 'authenticated' : 'not authenticated',
+      currentPage,
+      pageSize
+    });
+
     const fetchOrders = async () => {
-      // In development mode, we can proceed even without a token
-      if (!user?.token && process.env.NODE_ENV !== 'development') {
-        console.log('No user token available, skipping order fetch');
+      // Skip if still loading auth or no user is authenticated
+      if (authLoading || !user) {
+        console.log('Account Orders: Skipping fetch - auth loading or no user');
         return;
       }
-
+      
+      console.log('Account Orders: fetchOrders called with user:', user?.uid);
       setIsLoading(true);
 
       try {
@@ -56,31 +64,37 @@ export default function OrderHistoryPage() {
           sortDirection: 'desc'
         });
 
-        // Prepare headers - in development mode, we don't need a real token
-        const headers: HeadersInit = {};
-        if (user?.token) {
+        // Prepare headers with authentication token
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (user.token) {
           headers['Authorization'] = `Bearer ${user.token}`;
+          console.log('Account Orders: Using token for auth');
+        } else {
+          console.warn('User authenticated but no token available');
         }
 
-        const response = await fetch(`/api/orders?${params.toString()}`, { headers });
+        console.log('Account Orders: Making API request to:', `/api/orders?${params.toString()}`);
+        
+        const response = await fetch(`/api/orders?${params.toString()}`, { 
+          method: 'GET',
+          headers,
+          credentials: 'include' // Include cookies in the request
+        });
+
+        console.log('Account Orders: Response status:', response.status);
 
         if (!response.ok) {
-          throw new Error('Failed to fetch orders');
+          const errorText = await response.text();
+          console.error('Account Orders: API error response:', errorText);
+          throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
         }
 
-        // Get response as text first to avoid JSON parse errors
-        const text = await response.text();
-
-        // Try to parse as JSON
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (parseError) {
-          console.error('Error parsing orders response:', parseError);
-          console.log('Response text:', text.substring(0, 200));
-          throw new Error('Failed to parse orders response');
-        }
-
+        const data = await response.json();
+        console.log('Account Orders: Parsed response data:', data);
+        
         setOrders(data.orders || []);
         setTotalOrders(data.total || 0);
       } catch (error) {
@@ -92,7 +106,7 @@ export default function OrderHistoryPage() {
     };
 
     fetchOrders();
-  }, [user, currentPage, pageSize, showToast]);
+  }, [user, authLoading, currentPage, pageSize, showToast]);
 
   // Handle page change
   const handlePageChange = (page: number) => {

@@ -8,6 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/lib/context/ToastContext';
 import { Order, PaymentStatus } from '@/lib/types';
 import { formatPrice, formatDate } from '@/lib/utils';
+import { useFirebaseAuth } from '@/lib/firebase';
 
 export default function ThankYouPage() {
   return (
@@ -27,6 +28,7 @@ function ThankYouPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
+  const { user } = useFirebaseAuth();
 
   // Get the order ID from the URL
   const orderId = searchParams?.get('orderId');
@@ -96,12 +98,10 @@ function ThankYouPageContent() {
             }
           }
 
-          // If we get a 404 Not Found response, show a user-friendly message
-          if (response.status === 404) {
-            console.log('Order not found, showing error message');
-            setOrder(null);
-            setIsLoading(false);
-            showToast('Order not found. Please check your order ID.', 'error');
+          // If we get a 404 Not Found or authentication error, try localStorage fallback
+          if (response.status === 404 || response.status === 401 || response.status === 403) {
+            console.log(`Order fetch failed with status ${response.status}, trying localStorage fallback`);
+            // Don't throw error, let the localStorage fallback handle it
             return;
           }
 
@@ -193,6 +193,11 @@ function ThankYouPageContent() {
             <p className="text-gray-600">
               We've sent a confirmation email to <span className="font-medium">{order?.email}</span> with your order details.
             </p>
+            {!user && (
+              <p className="text-sm text-gray-500 mt-2">
+                Create an account to track your order status and view order history.
+              </p>
+            )}
           </div>
 
           {/* Order Summary */}
@@ -314,12 +319,21 @@ function ThankYouPageContent() {
             >
               <FiShoppingBag className="mr-2" /> Continue Shopping
             </Link>
-            <Link
-              href="/account/orders"
-              className="flex-1 py-3 bg-gray-200 text-gray-800 text-center font-medium rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
-            >
-              <FiUser className="mr-2" /> View Your Orders
-            </Link>
+            {user ? (
+              <Link
+                href="/account/orders"
+                className="flex-1 py-3 bg-gray-200 text-gray-800 text-center font-medium rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
+              >
+                <FiUser className="mr-2" /> View Your Orders
+              </Link>
+            ) : (
+              <Link
+                href={`/auth/signup?returnTo=${encodeURIComponent('/account/orders')}`}
+                className="flex-1 py-3 bg-gray-200 text-gray-800 text-center font-medium rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
+              >
+                <FiUser className="mr-2" /> Create Account to View Orders
+              </Link>
+            )}
           </div>
 
           <div className="mt-8 text-center text-sm text-gray-500">

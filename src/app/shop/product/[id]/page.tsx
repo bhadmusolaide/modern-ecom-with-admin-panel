@@ -27,6 +27,7 @@ export default function ProductDetailPage(props: { params: Promise<{ id: string 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Use the params with React.use
   const { id } = use(props.params);
@@ -132,6 +133,43 @@ export default function ProductDetailPage(props: { params: Promise<{ id: string 
     }
   };
 
+  // Get all images for the product (main image + additional images)
+  const getAllImages = () => {
+    if (!product) return [];
+
+    const images = [];
+    if (product.image) {
+      images.push(product.image);
+    }
+    if (product.images && product.images.length > 0) {
+      images.push(...product.images);
+    }
+    return images;
+  };
+
+  // Handle thumbnail click
+  const handleThumbnailClick = (index: number) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Handle next image
+  const handleNextImage = () => {
+    const allImages = getAllImages();
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  // Handle previous image
+  const handlePrevImage = () => {
+    const allImages = getAllImages();
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
+
+  // Get current image to display
+  const getCurrentImage = () => {
+    const allImages = getAllImages();
+    return allImages.length > 0 ? allImages[currentImageIndex] : product?.image;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -151,15 +189,39 @@ export default function ProductDetailPage(props: { params: Promise<{ id: string 
         <div className="flex flex-col md:flex-row -mx-4">
           {/* Product Images */}
           <div className="md:w-1/2 px-4 mb-6 md:mb-0">
-            <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+            <div className="product-image-container w-full aspect-square rounded-lg">
               <ProductImage
-                src={product?.image}
+                src={getCurrentImage()}
                 alt={product?.name || 'Product image'}
-                className="absolute inset-0"
+                className="w-full h-full"
                 onError={() => {
-                  console.error('ProductImage component failed to load image:', product?.image);
+                  console.error('ProductImage component failed to load image:', getCurrentImage());
                 }}
               />
+
+              {/* Navigation arrows */}
+              {getAllImages().length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md transition-all duration-200"
+                    aria-label="Previous image"
+                  >
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md transition-all duration-200"
+                    aria-label="Next image"
+                  >
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </>
+              )}
 
               {/* Product tags */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -174,22 +236,37 @@ export default function ProductDetailPage(props: { params: Promise<{ id: string 
                   </span>
                 )}
               </div>
+
+              {/* Image counter */}
+              {getAllImages().length > 1 && (
+                <div className="absolute bottom-4 right-4 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                  {currentImageIndex + 1} / {getAllImages().length}
+                </div>
+              )}
             </div>
 
             {/* Additional images gallery - if available */}
-            {product?.images && product.images.length > 0 && (
+            {getAllImages().length > 1 && (
               <div className="grid grid-cols-4 gap-2 mt-4">
-                {product.images.map((image, index) => (
-                  <div key={index} className="relative aspect-square overflow-hidden rounded-md bg-gray-100">
+                {getAllImages().map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleThumbnailClick(index)}
+                    className={`product-gallery-thumb w-full transition-all duration-200 ${
+                      index === currentImageIndex
+                        ? 'ring-2 ring-primary-500 ring-offset-2'
+                        : 'hover:ring-2 hover:ring-gray-300 hover:ring-offset-1'
+                    }`}
+                  >
                     <ProductImage
                       src={image}
-                      alt={`${product.name} - Image ${index + 1}`}
-                      className="absolute inset-0"
+                      alt={`${product?.name} - Image ${index + 1}`}
+                      className="w-full h-full"
                       onError={() => {
                         console.error('Gallery image failed to load:', image);
                       }}
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -330,11 +407,11 @@ export default function ProductDetailPage(props: { params: Promise<{ id: string 
             {relatedProducts.map((relatedProduct) => (
               <div key={relatedProduct.id} className="group related-product">
                 <Link href={`/shop/product/${relatedProduct.id}`} className="block">
-                  <div className="related-product-image mb-3">
+                  <div className="related-product-image mb-3 relative">
                     <ProductImage
                       src={relatedProduct.image}
                       alt={relatedProduct.name || 'Related product'}
-                      className="absolute inset-0"
+                      className="w-full h-full"
                       onError={() => {
                         console.error('Related product image failed to load:', relatedProduct.image);
                       }}

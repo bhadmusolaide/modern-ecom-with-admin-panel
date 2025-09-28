@@ -36,15 +36,33 @@ export const getStripe = () => {
 /**
  * Create a payment intent for an order
  * @param order The order to create a payment intent for
+ * @param authHeaders Optional authentication headers (for client-side calls)
  * @returns Promise resolving to the client secret
  */
 export const createPaymentIntent = async (order: Order): Promise<{ clientSecret: string; paymentIntentId: string }> => {
+  // Temporarily bypass Stripe for development
+  if (process.env.NEXT_PUBLIC_BYPASS_PAYMENT === 'true') {
+    console.warn('Bypassing Stripe payment intent creation for development.');
+    return {
+      clientSecret: 'dummy_client_secret_' + order.id,
+      paymentIntentId: 'dummy_payment_intent_id_' + order.id,
+    };
+  }
+
   try {
+    // Get the session cookie for authentication
+    // The session cookie is HttpOnly and will be sent automatically by the browser with credentials: 'include'
+    // No need to manually extract and add to Authorization header.
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
     const response = await fetch('/api/payment/create-intent', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      // Include credentials to send cookies
+      credentials: 'include',
       body: JSON.stringify({
         amount: order.total,
         currency: 'usd', // Default to USD, can be made dynamic
@@ -124,6 +142,41 @@ export const updateOrderWithPayment = async (
   paymentIntent: PaymentIntent
 ): Promise<Order> => {
   try {
+    // If payment is bypassed, set status to COMPLETED and provider to BYPASS
+    if (paymentIntent.id.startsWith('dummy_payment_intent_id_')) {
+      const updatedOrder: Order = {
+        ...order,
+        payment: {
+          ...order.payment,
+          provider: PaymentProvider.BYPASS,
+          method: PaymentMethod.NONE,
+          status: PaymentStatus.COMPLETED,
+          transactionId: paymentIntent.id,
+          paymentIntentId: paymentIntent.id,
+          amount: order.total,
+          currency: paymentIntent.currency,
+          datePaid: new Date().toISOString(),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+
+      const response = await fetch(`/api/orders/${order.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedOrder),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update order with bypassed payment information');
+      }
+
+      const data = await response.json();
+      return data.order;
+    }
+
     // Map Stripe payment status to our PaymentStatus enum
     let paymentStatus: PaymentStatus;
     switch (paymentIntent.status) {

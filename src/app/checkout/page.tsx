@@ -38,7 +38,6 @@ export default function CheckoutPage() {
     city: '',
     postalCode: '',
     country: 'US',
-    paymentMethod: 'credit-card',
     acceptBackorders: true
   });
 
@@ -96,7 +95,7 @@ export default function CheckoutPage() {
     };
 
     validateInventory();
-  }, [cart.items, showToast]);
+  }, [cart.items]);
 
   // Check for returning from signup
   useEffect(() => {
@@ -171,12 +170,14 @@ export default function CheckoutPage() {
         discount: 0,
         total: cart.subtotal + (cart.subtotal * 0.08),
         payment: {
-          method: formData.paymentMethod,
-          status: 'PENDING',
-          provider: 'MANUAL',
+          method: 'cash_on_delivery',
+          status: 'COMPLETED',
+          provider: 'BYPASS',
           amount: cart.subtotal + (cart.subtotal * 0.08),
-          currency: 'USD'
+          currency: 'USD',
+          datePaid: new Date().toISOString()
         },
+        status: 'PROCESSING',
         isGuestOrder: !user,
         userId: user?.id || null,
         requiresShipping: true
@@ -239,26 +240,8 @@ export default function CheckoutPage() {
       // Store the order ID for later use
       setOrderCreated(newOrder.id);
 
-      // If user is not logged in, redirect to signup page
-      if (!user) {
-        // Save checkout data in localStorage to restore after signup
-        localStorage.setItem('checkoutData', JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          address: formData.address,
-          city: formData.city,
-          postalCode: formData.postalCode,
-          country: formData.country,
-          orderId: newOrder.id
-        }));
-
-        // Redirect to signup page with return URL
-        router.push(`/auth/signup?returnTo=${encodeURIComponent(`/checkout?returnFromSignup=true&orderId=${newOrder.id}`)}`);
-      } else {
-        // If user is logged in, proceed to payment
-        router.push(`/checkout/payment?orderId=${encodeURIComponent(newOrder.id)}`);
-      }
+      // Redirect directly to thank you page since payment is bypassed
+      router.push(`/checkout/thank-you?orderId=${encodeURIComponent(newOrder.id)}`);
     } catch (error) {
       console.error('Error placing order:', error);
       showToast('Error placing order. Please try again.', 'error');
@@ -484,44 +467,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Payment Method */}
-              <div className="mb-8">
-                <h3 className="text-lg font-medium mb-4">Payment Method</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="credit-card"
-                      name="paymentMethod"
-                      value="credit-card"
-                      checked={formData.paymentMethod === 'credit-card'}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500"
-                    />
-                    <label htmlFor="credit-card" className="ml-2 text-gray-700">
-                      Credit Card
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="paypal"
-                      name="paymentMethod"
-                      value="paypal"
-                      checked={formData.paymentMethod === 'paypal'}
-                      onChange={handleChange}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500"
-                    />
-                    <label htmlFor="paypal" className="ml-2 text-gray-700">
-                      PayPal
-                    </label>
-                  </div>
-                </div>
-                <div className="mt-4 text-sm text-gray-500 flex items-center">
-                  <FiLock className="mr-1" size={14} />
-                  Your payment information is processed securely.
-                </div>
-              </div>
 
               {/* Inventory Warnings */}
               {(inventoryIssues.invalidItems.length > 0 || inventoryIssues.backorderedItems.length > 0) && (

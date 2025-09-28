@@ -47,6 +47,18 @@ export function getSafeImageUrl(url: string | null | undefined, fallback: string
     // Check if the URL is properly formatted
     try {
       new URL(trimmedUrl);
+
+      // Check if this is an old Supabase URL that needs to be migrated
+      const oldSupabaseUrl = 'https://aosdedyjlbzllplwvzjs.supabase.co';
+      const newSupabaseUrl = 'https://bifjrfovawcvmjfaqunk.supabase.co';
+
+      if (trimmedUrl.startsWith(oldSupabaseUrl)) {
+        // Migrate old URL to new Supabase project
+        const migratedUrl = trimmedUrl.replace(oldSupabaseUrl, newSupabaseUrl);
+        console.log('Migrating old Supabase URL:', trimmedUrl, '→', migratedUrl);
+        return migratedUrl;
+      }
+
       return trimmedUrl;
     } catch (e) {
       console.error('Invalid Supabase URL:', trimmedUrl, e);
@@ -123,7 +135,9 @@ export function isValidImageUrl(url: string | null | undefined): boolean {
     'unsplash.com',
     'firebasestorage.googleapis.com',
     'storage.googleapis.com',
-    'supabase.co/storage'
+    'supabase.co/storage',
+    'aosdedyjlbzllplwvzjs.supabase.co', // Old Supabase project
+    'bifjrfovawcvmjfaqunk.supabase.co'  // Current Supabase project
   ];
   const isImageHostingDomain = imageHostingDomains.some(domain => trimmedUrl.includes(domain));
 

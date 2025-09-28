@@ -357,6 +357,8 @@ export async function getOrders(
 ) {
   try {
     console.log('Firebase getOrders: Starting query with filters:', JSON.stringify(filters, null, 2));
+    console.log('Firebase getOrders: Pagination:', pagination);
+    console.log('Firebase getOrders: Use admin DB:', useAdminDb);
 
     // Use admin Firestore to bypass security rules if specified
     let dbToUse;
@@ -510,7 +512,7 @@ export async function getOrders(
     }
 
     // Return orders and pagination info
-    return {
+    const result = {
       orders: filteredOrders,
       pagination: {
         firstDoc: querySnapshot.docs[0] || null,
@@ -519,6 +521,14 @@ export async function getOrders(
         isEmpty: querySnapshot.empty
       }
     };
+
+    console.log('Firebase getOrders: Returning result:', {
+      ordersCount: result.orders.length,
+      pagination: result.pagination,
+      firstOrderId: result.orders.length > 0 ? result.orders[0].id : 'none'
+    });
+
+    return result;
   } catch (error) {
     console.error('Error getting orders:', error);
     console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
@@ -745,7 +755,10 @@ export async function getOrderCountsByStatus(): Promise<Record<OrderStatus, numb
       [OrderStatus.CANCELLED]: 0,
       [OrderStatus.REFUNDED]: 0,
       [OrderStatus.ON_HOLD]: 0,
-      [OrderStatus.BACKORDERED]: 0
+      [OrderStatus.BACKORDERED]: 0,
+      [OrderStatus.PARTIALLY_SHIPPED]: 0,
+      [OrderStatus.AWAITING_STOCK]: 0,
+      [OrderStatus.READY_FOR_PICKUP]: 0
     };
 
     // Count orders by status

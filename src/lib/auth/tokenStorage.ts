@@ -53,6 +53,31 @@ function isTokenExpired(expiry: number | null): boolean {
 }
 
 /**
+ * Validate if a token is a properly formatted JWT
+ * @param token The token to validate
+ * @returns True if the token appears to be a valid JWT format
+ */
+function isValidJWTFormat(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+
+  try {
+    // Check if all parts are base64url encoded
+    for (const part of parts) {
+      if (!/^[A-Za-z0-9_-]+$/.test(part)) return false;
+    }
+
+    // Try to decode the payload to validate structure
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload === 'object' && payload !== null;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Store the user's authentication token securely
  * - Sets an HttpOnly cookie via API call
  * - Keeps a copy in memory for client-side operations
@@ -64,6 +89,16 @@ export async function storeAuthToken(token: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
+    // Validate token format before proceeding
+    if (!isValidJWTFormat(token)) {
+      console.warn('Invalid token format provided to storeAuthToken:', {
+        tokenLength: token?.length,
+        tokenPrefix: token?.substring(0, 20) + '...',
+        isValidJWT: isValidJWTFormat(token)
+      });
+      return;
+    }
+
     // Get token expiry
     const expiry = getTokenExpiry(token);
 
@@ -88,7 +123,9 @@ export async function storeAuthToken(token: string): Promise<void> {
       });
 
       if (!response.ok) {
-        console.warn('Failed to store auth token in secure cookie, falling back to localStorage');
+        const errorText = await response.text();
+        console.warn(`Failed to store auth token in secure cookie (${response.status}): ${errorText}`);
+        console.warn('This is expected if the token is invalid or expired');
       } else {
         console.log('Auth token stored securely in HttpOnly cookie');
       }

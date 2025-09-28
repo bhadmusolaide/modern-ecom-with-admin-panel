@@ -63,6 +63,11 @@ export async function POST(request: NextRequest) {
       }
     };
 
+    console.log('Debug: access.userId:', access.userId);
+    console.log('Debug: orderData.userId:', orderData.userId);
+    console.log('Debug: orderToCreate.userId:', orderToCreate.userId);
+    console.log('Debug: orderToCreate.isGuestOrder:', orderToCreate.isGuestOrder);
+
     // Create the order
     console.log('Creating order with data:', JSON.stringify(orderToCreate, null, 2));
     console.log('Saving order to Firestore collection "orders"...');
@@ -76,7 +81,7 @@ export async function POST(request: NextRequest) {
       throw createError;
     }
 
-    return createApiResponse(newOrder, { status: 201 });
+    return createApiResponse(newOrder, 201);
   } catch (error) {
     console.error('Error creating order:', error);
     return createErrorResponse('Failed to create order', 500, { details: error instanceof Error ? error.message : 'Unknown error' });
@@ -90,6 +95,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     console.log('Orders API: Processing GET request');
+    console.log('Orders API: Request URL:', request.url);
+    console.log('Orders API: Request method:', request.method);
 
     // Extract auth token for debugging
     const authHeader = request.headers.get('authorization');
@@ -104,10 +111,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Unified auth check - always required, even in development mode
+    console.log('Orders API: Starting authentication check');
     const access = await checkAccess(request);
+    console.log('Orders API: Authentication check completed:', access);
 
     if (!access.authenticated) {
       console.error('Orders API: Authentication failed');
+      console.error('Orders API: Access result:', access);
       return createErrorResponse(
         access.error || 'Authentication required',
         access.status || 401
@@ -156,9 +166,21 @@ export async function GET(request: NextRequest) {
     // Build filter object
     const filters: any = {};
 
-    // If not admin, restrict to user's own orders
+    // Get user email from auth data or request
+    const userEmail = access.email || searchParams.get('userEmail');
+    console.log('Orders API: User email from auth:', userEmail);
+
+    // If not admin, retrieve both user's orders and guest orders with matching email
     if (!access.isAdmin) {
+      // For regular users, we'll use a special combined query approach
+      // This is handled in the query logic below
       filters.userId = userId;
+      
+      // Also store email for combined query
+      if (userEmail) {
+        filters.email = userEmail;
+        console.log('Orders API: Will also check for guest orders with email:', userEmail);
+      }
     } else {
       // Admin can filter by various criteria
       if (status) {
@@ -213,11 +235,89 @@ export async function GET(request: NextRequest) {
       console.log('Orders API: Page size:', pageSize);
 
       try {
-        result = await getOrders(
-          filters,
-          { pageSize },
-          true // Use admin DB
-        );
+        // For non-admin users, always try to get both authenticated user orders and guest orders with matching email
+        if (!access.isAdmin) {
+          console.log('Orders API: Getting orders for authenticated user');
+          console.log('Orders API: User ID:', filters.userId);
+          
+          // First, get orders by userId (authenticated user orders)
+          const userOrdersResult = await getOrders(
+            { userId: filters.userId, sortBy: 'createdAt', sortDirection: 'desc' },
+            { pageSize: 100 }, // Get more to ensure we have enough after combining
+            true // Use admin DB
+          );
+          
+          console.log('Orders API: Found user orders:', userOrdersResult.orders.length);
+
+          let combinedOrders = [...userOrdersResult.orders];
+          const orderIds = new Set(combinedOrders.map(order => order.id));
+          
+          // If we have user email, also get guest orders with that email
+          if (filters.email) {
+            console.log('Orders API: Also checking for guest orders with email:', filters.email);
+            
+            // Then, get guest orders by email
+            const guestOrdersResult = await getOrders(
+              { email: filters.email, sortBy: 'createdAt', sortDirection: 'desc' },
+              { pageSize: 100 }, // Get more to ensure we have enough after combining
+              true // Use admin DB
+            );
+            
+            console.log('Orders API: Found guest orders:', guestOrdersResult.orders.length);
+
+            // Add guest orders that aren't already in the results
+            guestOrdersResult.orders.forEach(order => {
+              if (!orderIds.has(order.id)) {
+                combinedOrders.push(order);
+                orderIds.add(order.id);
+              }
+            });
+          }
+
+          // Sort combined orders by creation date (newest first)
+          combinedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          console.log('Orders API: Total combined orders:', combinedOrders.length);
+
+          // Apply pagination to combined results
+          const startIndex = (page - 1) * pageSize;
+          const endIndex = startIndex + pageSize;
+          const paginatedOrders = combinedOrders.slice(startIndex, endIndex);
+          
+          console.log('Orders API: Returning paginated orders:', paginatedOrders.length);
+
+          // For debugging, log some order details
+          if (paginatedOrders.length > 0) {
+            console.log('Orders API: First order details:', JSON.stringify(paginatedOrders[0], null, 2));
+          }
+
+          result = {
+            orders: paginatedOrders,
+            total: combinedOrders.length,
+            totalPages: Math.ceil(combinedOrders.length / pageSize),
+            currentPage: page,
+            pageSize: pageSize
+          };
+
+          console.log(`Orders API: Combined results - ${userOrdersResult.orders.length} user orders + guest orders = ${combinedOrders.length} total`);
+        } else {
+          // Standard query for admin users
+          console.log('Orders API: Admin user - using standard query with filters');
+          result = await getOrders(
+            filters,
+            { page, pageSize },
+            true // Use admin DB
+          );
+          
+          // Format result for consistency
+          result = {
+            orders: result.orders || [],
+            total: result.pagination?.count || 0,
+            totalPages: Math.ceil((result.pagination?.count || 0) / pageSize),
+            currentPage: page,
+            pageSize: pageSize
+          };
+        }
 
         console.log('Orders API: getOrders returned successfully');
       } catch (orderError) {
@@ -270,13 +370,15 @@ export async function GET(request: NextRequest) {
       }
 
       // Ensure we have valid pagination data
-      const total = result.orders.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const total = result.total || result.orders.length;
+      const totalPages = result.totalPages || Math.max(1, Math.ceil(total / pageSize));
 
       return createApiResponse({
         orders: result.orders,
         total,
-        totalPages
+        totalPages,
+        currentPage: result.currentPage || page,
+        pageSize: result.pageSize || pageSize
       });
     } catch (fetchError) {
       console.error('Orders API: Error in getOrders function:', fetchError);

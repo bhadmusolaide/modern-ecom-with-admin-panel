@@ -232,9 +232,10 @@ export enum PaymentMethod {
  * Represents the payment processing providers
  */
 export enum PaymentProvider {
-  STRIPE = 'stripe',
-  PAYPAL = 'paypal',
-  MANUAL = 'manual'
+  STRIPE = 'STRIPE',
+  PAYPAL = 'PAYPAL',
+  MANUAL = 'MANUAL',
+  BYPASS = 'BYPASS',
 }
 
 /**

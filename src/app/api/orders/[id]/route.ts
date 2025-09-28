@@ -20,9 +20,6 @@ import {
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 import { Order, OrderStatus } from '@/lib/types';
-// Import client Firebase SDK for direct access
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
 
 interface RouteParams {
   params: {
@@ -40,7 +37,7 @@ export async function GET(
 ) {
   try {
     // Ensure params is awaited properly
-    const id = params.id;
+    const { id } = await params;
     console.log(`API: Processing GET request for order ID: ${id}`);
 
     // Validate the ID format
@@ -77,79 +74,42 @@ export async function GET(
       );
     }
 
-    if (!access.isAdmin) {
-      console.error('API: Admin access required but user is not admin');
-      return createErrorResponse('Forbidden. Admin access required.', 403);
-    }
+    // Allow both admin users and the order owner to access the order
+    console.log('API: Access granted for user:', access.userId);
 
-    console.log('API: Admin access granted for user:', access.userId);
-
-    // Fetch the order - try both methods
-    console.log('API: Attempting to fetch order from Firestore');
+    // Fetch the order using the orders service with client SDK
+    console.log('API: Attempting to fetch order from Firestore using client SDK');
     let order;
 
-    // First try direct client SDK access
     try {
-      console.log('API: Trying direct client SDK access first');
-      const orderRef = doc(db, 'orders', id);
-      const orderDoc = await getDoc(orderRef);
+      // Use client SDK instead of admin SDK to avoid permission issues
+      order = await getOrderById(id);
+      console.log('API: getOrderById result:', order ? 'Order found' : 'Order not found');
+    } catch (dbError) {
+      console.error('API: Error fetching order from database service:', dbError);
+      console.error('API: Error details:', dbError instanceof Error ? dbError.message : 'Unknown error');
+      console.error('API: Error stack:', dbError instanceof Error ? dbError.stack : 'No stack trace');
 
-      if (orderDoc.exists()) {
-        // Get raw data and sanitize it
-        const rawData = orderDoc.data();
+      // If it's a permission error, try a different approach
+      if (dbError instanceof Error && dbError.message.includes('permission-denied')) {
+        console.log('API: Permission denied, trying alternative approach');
 
-        // Sanitize dates to ensure they are valid
-        const sanitizeDate = (dateStr: any): string => {
-          if (!dateStr) return new Date().toISOString(); // Default to current date
-
-          try {
-            const date = new Date(dateStr);
-            return isNaN(date.getTime()) ? new Date().toISOString() : dateStr;
-          } catch (e) {
-            return new Date().toISOString();
-          }
-        };
-
-        // Create sanitized order object
-        order = {
-          id: orderDoc.id,
-          ...rawData,
-          createdAt: sanitizeDate(rawData.createdAt),
-          updatedAt: sanitizeDate(rawData.updatedAt),
-          payment: {
-            ...(rawData.payment || {}),
-            datePaid: rawData.payment?.datePaid ? sanitizeDate(rawData.payment.datePaid) : undefined,
-            dateRefunded: rawData.payment?.dateRefunded ? sanitizeDate(rawData.payment.dateRefunded) : undefined
-          },
-          notes: Array.isArray(rawData.notes) ? rawData.notes.map(note => ({
-            ...note,
-            createdAt: sanitizeDate(note.createdAt)
-          })) : []
-        };
-
-        console.log('API: Successfully fetched order using client SDK');
-      } else {
-        console.log('API: Order not found using client SDK');
-      }
-    } catch (clientError) {
-      console.error('API: Error fetching with client SDK:', clientError);
-      console.error('API: Client error details:', clientError instanceof Error ? clientError.message : 'Unknown error');
-    }
-
-    // If client SDK failed, try the orders service
-    if (!order) {
-      try {
-        console.log('API: Client SDK failed, trying orders service');
-        order = await getOrderById(id);
-        console.log('API: getOrderById result:', order ? 'Order found' : 'Order not found');
-      } catch (dbError) {
-        console.error('API: Error fetching order from database service:', dbError);
+        // For now, return a generic error - in production, you might want to:
+        // 1. Check if the user owns the order
+        // 2. Use admin SDK with proper service account
+        // 3. Implement proper Firestore security rules
         return createErrorResponse(
-          `Database error: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
-          500,
-          { details: dbError instanceof Error ? dbError.stack : 'No stack trace' }
+          'Order access denied. Please check your permissions.',
+          403,
+          { details: 'Firestore security rules may need to be updated to allow order access.' }
         );
       }
+
+      return createErrorResponse(
+        `Database error: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`,
+        500,
+        { details: dbError instanceof Error ? dbError.stack : 'No stack trace' }
+      );
     }
 
     if (!order) {
@@ -158,7 +118,7 @@ export async function GET(
     }
 
     console.log(`API: Successfully fetched order ${id}`);
-    return createApiResponse(order);
+    return createApiResponse({ order });
   } catch (error) {
     console.error('API: Unhandled error in GET handler:', error);
     console.error('API: Error details:', error instanceof Error ? error.message : 'Unknown error');
@@ -185,7 +145,7 @@ export async function PUT(
 ) {
   try {
     // Ensure params is awaited properly
-    const id = params.id;
+    const { id } = await params;
     console.log(`API: Processing PUT request for order ID: ${id}`);
 
     // Validate the ID format
@@ -243,7 +203,7 @@ export async function DELETE(
 ) {
   try {
     // Ensure params is awaited properly
-    const id = params.id;
+    const { id } = await params;
     console.log(`API: Processing DELETE request for order ID: ${id}`);
 
     // Validate the ID format

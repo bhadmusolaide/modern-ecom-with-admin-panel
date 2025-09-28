@@ -17,11 +17,8 @@ interface DynamicSectionProps {
 }
 
 const DynamicSection: React.FC<DynamicSectionProps> = ({ section }) => {
-  console.log(`Rendering section: ${section.type} (${section.id})`, section);
-
   // Don't render disabled sections
   if (!section.enabled) {
-    console.log(`Section ${section.type} (${section.id}) is disabled, not rendering`);
     return null;
   }
 
@@ -47,7 +44,6 @@ const DynamicSection: React.FC<DynamicSectionProps> = ({ section }) => {
       case 'new-arrivals':
         return <NewArrivals sectionData={section} />;
       default:
-        console.warn(`Unknown section type: ${section.type}`);
         return null;
     }
   };
@@ -56,8 +52,6 @@ const DynamicSection: React.FC<DynamicSectionProps> = ({ section }) => {
   try {
     return renderSection();
   } catch (error) {
-    console.error(`Error rendering section ${section.type} (${section.id}):`, error);
-    
     // Return a minimal error state that doesn't break the page
     return (
       <div className="py-8 px-4 bg-gray-50">

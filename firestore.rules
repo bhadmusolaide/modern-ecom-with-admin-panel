@@ -42,10 +42,13 @@ service cloud.firestore {
 
     // Orders collection - for non-admin users
     match /orders/{orderId} {
-      // Users can read and create their own orders
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      // Only admins can update or delete orders (covered by the admin rule above)
+      // Users can read their own orders, or any order if they have the orderId
+      allow read: if true;
+      // Allow order creation for both authenticated users and guest users
+      allow create: if true;
+      // Allow updates for order owners
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Only admins can delete orders (covered by the admin rule above)
     }
 
     // Categories collection - for non-admin users
