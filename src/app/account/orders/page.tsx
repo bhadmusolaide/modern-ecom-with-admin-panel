@@ -3,16 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useFirebaseAuth } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
 import { useToast } from '@/lib/context/ToastContext';
+import { safeFetch } from '@/lib/api/safeFetch';
 import { Order } from '@/lib/types';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, convertToDate } from '@/lib/utils';
 import AccountLayout from '@/components/account/AccountLayout';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Pagination from '@/components/ui/Pagination';
 
 export default function OrderHistoryPage() {
-  const { user, isLoading: authLoading } = useFirebaseAuth();
+  const { user, isLoading: authLoading, getIdToken } = useFirebaseAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -42,6 +43,7 @@ export default function OrderHistoryPage() {
     console.log('Account Orders: useEffect triggered with:', {
       authLoading,
       user: user ? 'authenticated' : 'not authenticated',
+      userId: user?.id,
       currentPage,
       pageSize
     });
@@ -52,8 +54,8 @@ export default function OrderHistoryPage() {
         console.log('Account Orders: Skipping fetch - auth loading or no user');
         return;
       }
-      
-      console.log('Account Orders: fetchOrders called with user:', user?.uid);
+
+      console.log('Account Orders: fetchOrders called with user:', user?.id);
       setIsLoading(true);
 
       try {
@@ -64,39 +66,69 @@ export default function OrderHistoryPage() {
           sortDirection: 'desc'
         });
 
-        // Prepare headers with authentication token
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json'
-        };
-        
-        if (user.token) {
-          headers['Authorization'] = `Bearer ${user.token}`;
-          console.log('Account Orders: Using token for auth');
-        } else {
-          console.warn('User authenticated but no token available');
-        }
-
         console.log('Account Orders: Making API request to:', `/api/orders?${params.toString()}`);
-        
-        const response = await fetch(`/api/orders?${params.toString()}`, { 
-          method: 'GET',
-          headers,
-          credentials: 'include' // Include cookies in the request
-        });
 
-        console.log('Account Orders: Response status:', response.status);
+        // Get a fresh token directly from Firebase
+        const token = await getIdToken();
+        console.log('Account Orders: Got fresh token:', token ? 'Yes (token available)' : 'No (token not available)');
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Account Orders: API error response:', errorText);
-          throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
+        try {
+          // Use safeFetch with fresh token
+          const data = await safeFetch(`/api/orders?${params.toString()}`, {
+            headers: token ? {
+              'Authorization': `Bearer ${token}`
+            } : undefined
+          });
+
+          console.log('Account Orders: Received orders count from API:', data.orders?.length || 0);
+
+          if (data.orders && data.orders.length > 0) {
+            setOrders(data.orders);
+            setTotalOrders(data.total || 0);
+            return;
+          } else {
+            console.log('Account Orders: No orders returned from API, trying direct Firestore access');
+          }
+        } catch (apiError) {
+          console.error('Error fetching orders from API:', apiError);
+          console.log('Account Orders: Falling back to direct Firestore access');
         }
 
-        const data = await response.json();
-        console.log('Account Orders: Parsed response data:', data);
-        
-        setOrders(data.orders || []);
-        setTotalOrders(data.total || 0);
+        // If API fails or returns no orders, try direct Firestore access
+        try {
+          // Import Firebase modules dynamically to avoid SSR issues
+          const { collection, getDocs, query, where, orderBy, limit } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase/config');
+
+          console.log('Account Orders: Fetching orders directly from Firestore');
+
+          // Create a query to get orders for the current user
+          const ordersCollection = collection(db, 'orders');
+          const ordersQuery = query(
+            ordersCollection,
+            where('userId', '==', user?.id),
+            orderBy('createdAt', 'desc'),
+            limit(pageSize)
+          );
+
+          // Execute the query
+          const querySnapshot = await getDocs(ordersQuery);
+
+          // Convert the query snapshot to an array of orders
+          const ordersData: Order[] = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Order));
+
+          console.log('Account Orders: Received orders count from Firestore:', ordersData.length);
+
+          // Update state with the fetched orders
+          setOrders(ordersData);
+          setTotalOrders(ordersData.length);
+        } catch (firestoreError) {
+          console.error('Error fetching orders directly from Firestore:', firestoreError);
+          throw firestoreError; // Re-throw to be caught by outer catch
+        }
       } catch (error) {
         console.error('Error fetching orders:', error);
         showToast('Failed to load your orders', 'error');
@@ -187,7 +219,14 @@ export default function OrderHistoryPage() {
                           {order.orderNumber}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(order.createdAt)}
+                          {(() => {
+                            try {
+                              return order.createdAt ? formatDate(order.createdAt) : 'N/A';
+                            } catch (error) {
+                              console.warn('Error formatting order date:', order.createdAt, error);
+                              return 'Invalid Date';
+                            }
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <StatusBadge status={order.status} />

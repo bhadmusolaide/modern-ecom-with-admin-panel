@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FiEdit2, FiTrash2, FiCopy, FiPackage, FiTag, FiStar, FiCheck, FiX } from 'react-icons/fi';
 import { Product } from '@/lib/types';
+import { formatPrice } from '@/lib/utils';
 
 interface ProductCardViewProps {
   products: Product[];
@@ -186,9 +187,9 @@ export default function ProductCardView({
                   onClick={() => onInlineEdit && handleInlineEditStart(product.id, 'price', product.price)}
                   title={onInlineEdit ? "Click to edit" : undefined}
                 >
-                  ${product.price}
+                  {formatPrice(product.price)}
                   {product.isSale && product.salePrice && (
-                    <span className="ml-2 text-red-600">${product.salePrice}</span>
+                    <span className="ml-2 text-red-600">{formatPrice(product.salePrice || 0)}</span>
                   )}
                 </div>
               )}

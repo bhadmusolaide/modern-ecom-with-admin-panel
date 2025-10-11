@@ -47,10 +47,10 @@ function ShopPageContent() {
       id: 'price',
       name: 'Price',
       options: [
-        { value: 'under-50', label: 'Under $50' },
-        { value: '50-100', label: '$50 - $100' },
-        { value: '100-200', label: '$100 - $200' },
-        { value: 'over-200', label: 'Over $200' }
+        { value: 'under-50', label: 'Under ₦50' },
+        { value: '50-100', label: '₦50 - ₦100' },
+        { value: '100-200', label: '₦100 - ₦200' },
+        { value: 'over-200', label: 'Over ₦200' }
       ]
     },
     {

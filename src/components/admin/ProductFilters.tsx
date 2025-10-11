@@ -5,6 +5,7 @@ import { FiFilter, FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { Product, Category } from '@/lib/types';
+import { formatPrice } from '@/lib/utils';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
@@ -220,8 +221,8 @@ export default function ProductFilters({ onApplyFilters, onResetFilters }: Produ
 
               <div className="relative pt-1">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs text-neutral-500">${priceRange.min}</div>
-                  <div className="text-xs text-neutral-500">${priceRange.max}</div>
+                  <div className="text-xs text-neutral-500">{formatPrice(priceRange.min)}</div>
+                  <div className="text-xs text-neutral-500">{formatPrice(priceRange.max)}</div>
                 </div>
                 <input
                   type="range"

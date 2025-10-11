@@ -6,6 +6,7 @@ import { useToast } from '@/lib/context/ToastContext';
 import { collection, getDocs, deleteDoc, doc, query, orderBy, where, limit, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product } from '@/lib/types';
+import { formatPrice } from '@/lib/utils';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { SortField, SortDirection } from '@/components/admin/ProductList';
@@ -391,7 +392,7 @@ function ProductsPage() {
 
               {(activeFilters.priceRange.min > 0 || activeFilters.priceRange.max < 1000) && (
                 <span className="inline-flex items-center px-2 py-1 mr-2 mb-2 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Price: ${activeFilters.priceRange.min} - ${activeFilters.priceRange.max}
+                  Price: {formatPrice(activeFilters.priceRange.min)} - {formatPrice(activeFilters.priceRange.max)}
                   <button
                     onClick={() => setActiveFilters({...activeFilters, priceRange: { min: 0, max: 1000 }})}
                     className="ml-1 text-green-500 hover:text-green-700"

@@ -23,7 +23,9 @@ export interface User {
   role: 'ADMIN' | 'CUSTOMER' | 'EDITOR' | 'MANAGER';
   permissions?: string[];
   emailVerified?: boolean;
-  token?: string; // Add token to the User interface
+  token?: string;
+  lastLoginAt?: any;
+  createdAt?: any;
 }
 
 interface FirebaseAuthContextType {

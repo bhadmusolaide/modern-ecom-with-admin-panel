@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { FiEdit2, FiTrash2, FiCopy, FiPackage, FiTag, FiStar } from 'react-icons/fi';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
+import { formatPrice } from '@/lib/utils';
+
 interface VirtualizedProductListProps {
   products: Product[];
   categories: { [key: string]: string };
@@ -181,9 +183,9 @@ export default function VirtualizedProductList({
                 {isColumnVisible('price') && (
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="text-sm text-neutral-900">
-                      ${product.price}
+                      {formatPrice(product.price)}
                       {product.isSale && product.salePrice && (
-                        <div className="text-sm text-red-600">${product.salePrice}</div>
+                        <div className="text-sm text-red-600">{formatPrice(product.salePrice || 0)}</div>
                       )}
                     </div>
                   </td>

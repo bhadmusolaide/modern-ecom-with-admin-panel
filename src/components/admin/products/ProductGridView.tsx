@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FiEdit2, FiTrash2, FiCopy, FiPackage, FiTag, FiStar, FiCheck, FiX } from 'react-icons/fi';
 import { Product } from '@/lib/types';
+import { formatPrice } from '@/lib/utils';
 
 interface ProductGridViewProps {
   products: Product[];
@@ -195,9 +196,9 @@ export default function ProductGridView({
                     onClick={() => onInlineEdit && handleInlineEditStart(product.id, 'price', product.price)}
                     title={onInlineEdit ? "Click to edit" : undefined}
                   >
-                    ${product.price}
+                    {formatPrice(product.price)}
                     {product.isSale && product.salePrice && (
-                      <div className="text-sm text-red-600">${product.salePrice}</div>
+                      <div className="text-sm text-red-600">{formatPrice(product.salePrice || 0)}</div>
                     )}
                   </div>
                 )}

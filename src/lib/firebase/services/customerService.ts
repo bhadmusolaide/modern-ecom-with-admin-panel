@@ -220,7 +220,7 @@ export const searchCustomers = async (
 
     // Filter customers by name or email
     const filteredCustomers = customers.filter(customer => {
-      const nameMatch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const nameMatch = (customer as any).name?.toLowerCase().includes(searchTerm.toLowerCase());
       const emailMatch = customer.email.toLowerCase().includes(searchTerm.toLowerCase());
       return nameMatch || emailMatch;
     });
@@ -527,29 +527,42 @@ export const createOrUpdateCustomerFromOrder = async (
   }
 ) => {
   try {
+    console.log('CustomerService: Starting customer creation/update for order:', orderData.id);
+    console.log('CustomerService: Order data:', JSON.stringify(orderData, null, 2));
+
     // Check if a customer with this email already exists
+    console.log('CustomerService: Checking if customer exists with email:', orderData.email);
     const existingCustomer = await getCustomerByEmail(orderData.email);
-    
+    console.log('CustomerService: Existing customer result:', existingCustomer ? 'Found' : 'Not found');
+
     if (existingCustomer) {
+      console.log('CustomerService: Updating existing customer:', existingCustomer.id);
       // Update existing customer
       const customerRef = doc(db, CUSTOMERS_COLLECTION, existingCustomer.id);
-      
-      await updateDoc(customerRef, {
+
+      const updateData = {
         lastOrderDate: orderData.createdAt || serverTimestamp(),
         totalOrders: increment(1),
         totalSpent: increment(orderData.total || 0),
         updatedAt: serverTimestamp()
-      });
-      
+      };
+
+      console.log('CustomerService: Update data:', JSON.stringify(updateData, null, 2));
+
+      await updateDoc(customerRef, updateData);
+      console.log('CustomerService: Customer updated successfully');
+
       // Update the order with the customer ID
       const orderRef = doc(db, ORDERS_COLLECTION, orderData.id);
       await updateDoc(orderRef, {
         customerId: existingCustomer.id,
         updatedAt: serverTimestamp()
       });
-      
+      console.log('CustomerService: Order updated with customer ID');
+
       return existingCustomer.id;
     } else {
+      console.log('CustomerService: Creating new customer for email:', orderData.email);
       // Create a new customer
       const newCustomerData = {
         email: orderData.email,
@@ -573,22 +586,44 @@ export const createOrUpdateCustomerFromOrder = async (
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-      
+  
+      console.log('CustomerService: About to create customer document with data:', JSON.stringify(newCustomerData, null, 2));
+
+      console.log('CustomerService: New customer data:', JSON.stringify(newCustomerData, null, 2));
+
       // Create the customer
+      console.log('CustomerService: Calling addDoc on customers collection...');
       const customerRef = await addDoc(customersRef, newCustomerData);
-      
+      console.log('CustomerService: Customer created with ID:', customerRef.id);
+      console.log('CustomerService: Customer document path:', customerRef.path);
+
       // Update the order with the customer ID
       const orderRef = doc(db, ORDERS_COLLECTION, orderData.id);
+      console.log('CustomerService: Updating order with customer ID:', customerRef.id);
       await updateDoc(orderRef, {
         customerId: customerRef.id,
         updatedAt: serverTimestamp()
       });
-      
+      console.log('CustomerService: Order updated with new customer ID');
+
       return customerRef.id;
     }
   } catch (error) {
-    console.error('Error creating or updating customer from order:', error);
-    throw error;
+    console.error('CustomerService: CRITICAL ERROR in createOrUpdateCustomerFromOrder:', error);
+    console.error('CustomerService: Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      orderData: {
+        id: orderData.id,
+        email: orderData.email,
+        customerName: orderData.customerName,
+        total: orderData.total
+      },
+      timestamp: new Date().toISOString()
+    });
+
+    // Re-throw with more context
+    throw new Error(`Failed to create/update customer for order ${orderData.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 

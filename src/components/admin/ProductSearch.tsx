@@ -11,6 +11,8 @@ import Select from '@/components/ui/Select';
 import { FiSearch, FiFilter, FiX, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import Image from 'next/image';
 import { debounce } from 'lodash';
+import { formatPrice } from '@/lib/utils';
+
 
 interface ProductSearchProps {
   onSelectProduct?: (product: Product) => void;
@@ -23,8 +25,8 @@ interface ProductSearchProps {
   };
 }
 
-const ProductSearch: React.FC<ProductSearchProps> = ({ 
-  onSelectProduct, 
+const ProductSearch: React.FC<ProductSearchProps> = ({
+  onSelectProduct,
   isModal = false,
   initialFilters = {}
 }) => {
@@ -36,7 +38,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  
+
   // Filters
   const [filters, setFilters] = useState({
     category: initialFilters.category || '',
@@ -82,7 +84,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
   // Handle filter changes
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const target = e.target as HTMLInputElement;
       setFilters(prev => ({
@@ -113,7 +115,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
       maxPrice: '',
       inStock: false,
     });
-    
+
     // Re-fetch with reset filters
     setProducts([]);
     setLastDoc(null);
@@ -125,11 +127,11 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
   const fetchProducts = async (term: string = '', loadMore: boolean = false) => {
     try {
       setLoading(true);
-      
+
       // Start building the query
       let productsQuery = collection(db, 'products');
       let constraints: any[] = [];
-      
+
       // Add search term filter if provided
       if (term) {
         // This is a simplified search - in a real app, you might want to use
@@ -137,40 +139,40 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
         constraints.push(where('name', '>=', term));
         constraints.push(where('name', '<=', term + '\uf8ff'));
       }
-      
+
       // Add category filter if selected
       if (filters.category) {
         constraints.push(where('category', '==', filters.category));
       }
-      
+
       // Add stock filter if selected
       if (filters.inStock) {
         constraints.push(where('stock', '>', 0));
       }
-      
+
       // Add price range filters if provided
       // Note: Firestore doesn't support multiple range queries on different fields
       // So we'll filter the price range in JavaScript after fetching
-      
+
       // Add ordering and pagination
       constraints.push(orderBy('name'));
       constraints.push(limit(10));
-      
+
       // If loading more, start after the last document
       if (loadMore && lastDoc) {
         constraints.push(startAfter(lastDoc));
       }
-      
+
       // Execute the query
       const q = query(productsQuery, ...constraints);
       const snapshot = await getDocs(q);
-      
+
       // Process the results
       const fetchedProducts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
-      
+
       // Filter by price range in JavaScript (since Firestore can't do multiple range queries)
       let filteredProducts = fetchedProducts;
       if (filters.minPrice) {
@@ -181,12 +183,12 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
         const maxPrice = parseFloat(filters.maxPrice as string);
         filteredProducts = filteredProducts.filter(product => product.price <= maxPrice);
       }
-      
+
       // Update state
       setProducts(prev => loadMore ? [...prev, ...filteredProducts] : filteredProducts);
       setLastDoc(snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null);
       setHasMore(snapshot.docs.length === 10); // If we got less than the limit, there are no more
-      
+
     } catch (error) {
       console.error('Error searching products:', error);
     } finally {
@@ -231,7 +233,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
               className="pl-10"
             />
           </div>
-          
+
           <Button
             type="button"
             variant={showFilters ? "primary" : "outline"}
@@ -240,13 +242,13 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
           >
             <FiFilter className="h-4 w-4 mr-2" />
             Filters
-            {showFilters ? 
-              <FiChevronUp className="h-4 w-4 ml-2" /> : 
+            {showFilters ?
+              <FiChevronUp className="h-4 w-4 ml-2" /> :
               <FiChevronDown className="h-4 w-4 ml-2" />
             }
           </Button>
         </div>
-        
+
         {showFilters && (
           <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -267,7 +269,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
                   ))}
                 </Select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Min Price
@@ -282,7 +284,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
                   placeholder="Min"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Max Price
@@ -298,7 +300,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center mb-4">
               <input
                 type="checkbox"
@@ -312,7 +314,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
                 In Stock Only
               </label>
             </div>
-            
+
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
@@ -331,7 +333,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
           </div>
         )}
       </div>
-      
+
       {loading && products.length === 0 ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
@@ -365,8 +367,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.map((product) => (
-                  <tr 
-                    key={product.id} 
+                  <tr
+                    key={product.id}
                     onClick={() => handleSelectProduct(product)}
                     className="cursor-pointer hover:bg-gray-50"
                   >
@@ -395,10 +397,10 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        ${product.price.toFixed(2)}
+                        {formatPrice(product.price)}
                         {product.isSale && product.salePrice && (
                           <span className="ml-2 line-through text-gray-500">
-                            ${product.salePrice.toFixed(2)}
+                            {formatPrice(product.salePrice || 0)}
                           </span>
                         )}
                       </div>
@@ -437,7 +439,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
               </tbody>
             </table>
           </div>
-          
+
           {hasMore && (
             <div className="mt-4 text-center">
               <Button
@@ -457,8 +459,8 @@ const ProductSearch: React.FC<ProductSearchProps> = ({
           <FiSearch className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
           <p className="text-gray-500">
-            {searchTerm ? 
-              `No products matching "${searchTerm}"` : 
+            {searchTerm ?
+              `No products matching "${searchTerm}"` :
               'Try adjusting your search or filters to find what you\'re looking for.'
             }
           </p>

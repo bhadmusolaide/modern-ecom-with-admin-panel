@@ -52,6 +52,12 @@ export const createCustomerFromOrder = async (orderId: string): Promise<string> 
     return customerId;
   } catch (error) {
     console.error('Error creating customer from order:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      orderId,
+      timestamp: new Date().toISOString()
+    });
     throw error;
   }
 };

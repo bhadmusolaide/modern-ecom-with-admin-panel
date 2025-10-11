@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useToast } from '@/lib/context/ToastContext';
 import { Order, PaymentStatus } from '@/lib/types';
 import { formatPrice, formatDate } from '@/lib/utils';
-import { useFirebaseAuth } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
 
 export default function ThankYouPage() {
   return (
@@ -273,7 +273,14 @@ function ThankYouPageContent() {
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
                   Status: {order?.payment?.status?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown'}
-                  {order?.payment?.status === PaymentStatus.COMPLETED && order?.payment?.datePaid && ` on ${formatDate(order.payment.datePaid)}`}
+                  {order?.payment?.status === PaymentStatus.COMPLETED && order?.payment?.datePaid && ` on ${(() => {
+                    try {
+                      return formatDate(order.payment.datePaid);
+                    } catch (error) {
+                      console.warn('Error formatting payment date:', order.payment.datePaid, error);
+                      return 'Invalid Date';
+                    }
+                  })()}`}
                 </p>
               </div>
             </div>

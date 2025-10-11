@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, lazy, Suspense, useCallback } from
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product } from '@/lib/types';
+import { formatPrice } from '@/lib/utils';
 import { FiGrid, FiList, FiColumns, FiZap, FiSmartphone, FiPackage, FiTag, FiStar, FiEdit2, FiCopy, FiTrash2 } from 'react-icons/fi';
 import { useToast } from '@/lib/context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -855,7 +856,7 @@ export default function EnhancedProductList({
                               onClick={() => handleInlineEdit(product.id, 'price', product.price)}
                               title="Click to edit"
                             >
-                              ${product.price}
+                              {formatPrice(product.price)}
                             </div>
                             {product.isSale && product.salePrice && (
                               <div
@@ -863,7 +864,7 @@ export default function EnhancedProductList({
                                 onClick={() => handleInlineEdit(product.id, 'salePrice', product.salePrice)}
                                 title="Click to edit sale price"
                               >
-                                ${product.salePrice}
+                                {formatPrice(product.salePrice)}
                               </div>
                             )}
                           </td>

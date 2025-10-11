@@ -308,7 +308,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
       // Add a timeout to the fetch request
       const controller = new AbortController();
-      timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
       let responseText;
       let response;

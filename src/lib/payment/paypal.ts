@@ -28,7 +28,7 @@ export const createPayPalOrder = async (order: Order): Promise<string> => {
           quantity: item.quantity,
           unit_amount: {
             currency_code: 'USD',
-            value: (item.price / 100).toFixed(2), // Convert cents to dollars
+            value: item.price.toFixed(2),
           },
         })),
         shipping: {

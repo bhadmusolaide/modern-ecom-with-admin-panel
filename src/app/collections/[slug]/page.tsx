@@ -13,6 +13,8 @@ import ErrorState from '@/components/ui/ErrorState';
 import EmptyState from '@/components/ui/EmptyState';
 import Card from '@/components/ui/Card';
 
+import { formatPrice } from '@/lib/utils';
+
 // Number of products per page
 const PRODUCTS_PER_PAGE = 12;
 
@@ -46,15 +48,7 @@ export default function CategoryPage() {
   const [showOnSale, setShowOnSale] = useState(false);
   const [showNew, setShowNew] = useState(false);
 
-  // Format price for display
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+
 
   // Load category and products
   useEffect(() => {

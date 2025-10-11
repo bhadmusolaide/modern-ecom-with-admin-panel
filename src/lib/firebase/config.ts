@@ -21,10 +21,11 @@ const db = getFirestore(app);
 
 // Log minimal Firebase initialization status
 if (process.env.NODE_ENV === 'development') {
-  console.log('Firebase initialized:', {
+  console.log('Firebase client initialized:', {
     appInitialized: !!app,
     authInitialized: !!auth,
-    dbInitialized: !!db
+    dbInitialized: !!db,
+    projectId: firebaseConfig.projectId
   });
 }
 

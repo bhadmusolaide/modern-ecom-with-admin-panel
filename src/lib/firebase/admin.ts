@@ -35,16 +35,29 @@ export function initializeAdminApp() {
   }
 
   try {
+    console.log('Firebase Admin: Starting initialization...');
+    console.log('Firebase Admin: Service account project ID:', serviceAccount.project_id);
+
     // Initialize Firebase Admin
     const firebaseAdminConfig = {
       credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-      databaseURL: `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebaseio.com`,
+      projectId: serviceAccount.project_id,
     };
+
+    console.log('Firebase Admin config:', {
+      projectId: firebaseAdminConfig.projectId,
+      credentialType: 'service_account'
+    });
 
     // Initialize the app
     app = admin.initializeApp(firebaseAdminConfig);
+    console.log('Firebase Admin: App initialized:', app.name);
+
     auth = admin.auth(app);
+    console.log('Firebase Admin: Auth initialized');
+
     db = admin.firestore(app);
+    console.log('Firebase Admin: Firestore initialized');
 
     // Configure Firestore settings to optimize performance
     db.settings({
@@ -109,13 +122,23 @@ const createFallbackFirestore = (): Firestore => {
 // This prevents multiple initializations across API routes
 if (typeof window === 'undefined') { // Only run on server
   try {
+    console.log('Initializing Firebase Admin SDK...');
+    console.log('Service account project ID:', serviceAccount.project_id);
+    console.log('Environment project ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+
     // Initialize the admin app
     const { app: initializedApp, auth: initializedAuth, db: initializedDb } = initializeAdminApp();
     app = initializedApp;
     auth = initializedAuth;
     db = initializedDb;
+
+    console.log('Firebase Admin SDK initialized successfully');
+    console.log('Admin app name:', app.name);
+    console.log('Firestore instance:', !!db);
   } catch (error) {
     console.error('Error in initial Firebase Admin initialization:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
     app = {} as App;
     auth = {} as Auth;
     db = createFallbackFirestore();
@@ -133,6 +156,11 @@ export function getAdminAuth(): Auth {
 // Export a function to get the firestore instance to prevent direct imports of getFirestore
 export function getAdminFirestore(): Firestore {
   try {
+    console.log('Admin Firestore: Getting Firestore instance');
+    console.log('Admin Firestore: isInitialized:', isInitialized);
+    console.log('Admin Firestore: db exists:', !!db);
+    console.log('Admin Firestore: db type:', typeof db);
+
     if (!isInitialized) {
       console.log('Admin Firestore: Initializing admin app');
       initializeAdminApp();
@@ -143,6 +171,7 @@ export function getAdminFirestore(): Firestore {
       throw new Error('Failed to initialize Firestore admin instance');
     }
 
+    console.log('Admin Firestore: Returning Firestore instance:', !!db);
     return db;
   } catch (error) {
     console.error('Admin Firestore: Error getting admin Firestore instance:', error);

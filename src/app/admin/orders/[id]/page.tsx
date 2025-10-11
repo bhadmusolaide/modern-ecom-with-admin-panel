@@ -256,7 +256,7 @@ function OrderDetailPage({ id }: { id: string }) {
                 method: 'CREDIT_CARD',
                 status: 'PAID',
                 amount: 99.99,
-                currency: 'USD',
+                currency: 'NGN',
                 datePaid: new Date().toISOString()
               },
               notes: [

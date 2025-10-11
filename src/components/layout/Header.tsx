@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { FiMenu, FiX, FiUser, FiSearch, FiHeart, FiChevronDown } from 'react-icons/fi';
 import { useSiteSettings } from '@/lib/context/SiteSettingsContext';
 import { useCart } from '@/lib/context/CartContext';
@@ -24,6 +24,7 @@ export const HeaderWrapper: React.FC = () => {
 };
 
 const Header: React.FC = () => {
+  const router = useRouter();
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -218,6 +219,7 @@ const Header: React.FC = () => {
             whileTap={{ scale: 0.9 }}
             className={`${isTransparent ? 'text-white hover:text-gray-200' : 'text-gray-700 hover:text-primary-600'}`}
             aria-label="Favorites"
+            onClick={() => router.push('/wishlist')}
           >
             <FiHeart size={20} />
           </motion.button>
@@ -316,7 +318,7 @@ const Header: React.FC = () => {
                 <button className="text-gray-700 hover:text-primary-600" aria-label="Search">
                   <FiSearch size={20} />
                 </button>
-                <button className="text-gray-700 hover:text-primary-600" aria-label="Favorites">
+                <button className="text-gray-700 hover:text-primary-600" aria-label="Favorites" onClick={() => router.push('/wishlist')}>
                   <FiHeart size={20} />
                 </button>
                 <button 

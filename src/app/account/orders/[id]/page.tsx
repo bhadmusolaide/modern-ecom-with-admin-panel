@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useFirebaseAuth } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
 import { useToast } from '@/lib/context/ToastContext';
 import { Order, OrderStatus, PaymentStatus, OrderNote } from '@/lib/types';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -111,10 +111,28 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
           <div>
             <h1 className="text-lg leading-6 font-medium text-gray-900">
-              Order #{order.orderNumber}
+              Order #{order.orderNumber || 'N/A'}
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Placed on {formatDate(order.createdAt)}
+              Placed on {(() => {
+                try {
+                  if (order.createdAt) {
+                    const date = new Date(order.createdAt);
+                    if (isNaN(date.getTime())) {
+                      return 'Invalid Date';
+                    }
+                    return date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    });
+                  }
+                  return 'N/A';
+                } catch (error) {
+                  console.warn('Error formatting order createdAt:', order.createdAt, error);
+                  return 'Invalid Date';
+                }
+              })()}
             </p>
           </div>
           <StatusBadge status={order.status} />
@@ -125,15 +143,43 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
             <div>
               <h3 className="text-sm font-medium text-gray-900">Shipping Address</h3>
               <address className="mt-2 not-italic text-sm text-gray-500">
-                {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
-                {order.shippingAddress.address}<br />
-                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}<br />
-                {order.shippingAddress.country}
-                {order.shippingAddress.phone && (
+                {order.shippingAddress ? (
                   <>
-                    <br />
-                    {order.shippingAddress.phone}
+                    {order.shippingAddress.firstName && order.shippingAddress.lastName ? (
+                      <>
+                        {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
+                      </>
+                    ) : order.shippingAddress.firstName || order.shippingAddress.lastName ? (
+                      <>
+                        {order.shippingAddress.firstName || order.shippingAddress.lastName}<br />
+                      </>
+                    ) : null}
+                    {order.shippingAddress.address && (
+                      <>
+                        {order.shippingAddress.address}<br />
+                      </>
+                    )}
+                    {(order.shippingAddress.city || order.shippingAddress.state || order.shippingAddress.postalCode) && (
+                      <>
+                        {order.shippingAddress.city}{order.shippingAddress.city && (order.shippingAddress.state || order.shippingAddress.postalCode) ? ',' : ''}
+                        {order.shippingAddress.state ? ` ${order.shippingAddress.state}` : ''}
+                        {order.shippingAddress.postalCode ? ` ${order.shippingAddress.postalCode}` : ''}<br />
+                      </>
+                    )}
+                    {order.shippingAddress.country && (
+                      <>
+                        {order.shippingAddress.country}
+                      </>
+                    )}
+                    {order.shippingAddress.phone && (
+                      <>
+                        <br />
+                        {order.shippingAddress.phone}
+                      </>
+                    )}
                   </>
+                ) : (
+                  'Shipping address not available'
                 )}
               </address>
             </div>
@@ -141,61 +187,83 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
             <div>
               <h3 className="text-sm font-medium text-gray-900">Shipping Method</h3>
               <p className="mt-2 text-sm text-gray-500">
-                {order.shippingMethod.name}
-                {order.shippingMethod.estimatedDelivery && (
-                  <span className="block">{order.shippingMethod.estimatedDelivery}</span>
+                {order.shippingMethod ? (
+                  <>
+                    {order.shippingMethod.name}
+                    {order.shippingMethod.estimatedDelivery && (
+                      <span className="block">{order.shippingMethod.estimatedDelivery}</span>
+                    )}
+                  </>
+                ) : (
+                  'Shipping method not available'
                 )}
               </p>
 
               <h3 className="text-sm font-medium text-gray-900 mt-4">Payment Method</h3>
               <p className="mt-2 text-sm text-gray-500">
-                {order.payment.method}
-                <span className="block">
-                  Status: <span className={`font-medium ${
-                    order.payment.status === PaymentStatus.PAID
-                      ? 'text-green-600'
-                      : order.payment.status === PaymentStatus.PENDING
-                      ? 'text-yellow-600'
-                      : 'text-red-600'
-                  }`}>
-                    {order.payment.status}
+                {order.payment?.method || 'Payment method not available'}
+                {order.payment && (
+                  <span className="block">
+                    Status: <span className={`font-medium ${
+                      order.payment.status === PaymentStatus.COMPLETED
+                        ? 'text-green-600'
+                        : order.payment.status === PaymentStatus.PENDING
+                        ? 'text-yellow-600'
+                        : 'text-red-600'
+                    }`}>
+                      {order.payment.status}
+                    </span>
                   </span>
-                </span>
+                )}
               </p>
             </div>
           </div>
         </div>
 
         {/* Tracking Information */}
-        {order.tracking && (
+        {order.trackingInfo && (
           <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
             <h3 className="text-sm font-medium text-gray-900">Tracking Information</h3>
             <div className="mt-2 text-sm text-gray-500">
               <p>
-                Carrier: {order.tracking.carrier}
+                Carrier: {order.trackingInfo.carrier}
               </p>
               <p className="mt-1">
-                Tracking Number: {order.tracking.trackingUrl ? (
+                Tracking Number: {order.trackingInfo.trackingUrl ? (
                   <a
-                    href={order.tracking.trackingUrl}
+                    href={order.trackingInfo.trackingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary-600 hover:text-primary-900"
                   >
-                    {order.tracking.trackingNumber}
+                    {order.trackingInfo.trackingNumber}
                   </a>
                 ) : (
-                  order.tracking.trackingNumber
+                  order.trackingInfo.trackingNumber
                 )}
               </p>
-              {order.tracking.shippedDate && (
+              {order.trackingInfo.shippedDate && (
                 <p className="mt-1">
-                  Shipped Date: {formatDate(order.tracking.shippedDate)}
+                  Shipped Date: {(() => {
+                    try {
+                      return formatDate(order.trackingInfo.shippedDate);
+                    } catch (error) {
+                      console.warn('Error formatting shipped date:', order.trackingInfo.shippedDate, error);
+                      return 'Invalid Date';
+                    }
+                  })()}
                 </p>
               )}
-              {order.tracking.estimatedDeliveryDate && (
+              {order.trackingInfo.estimatedDeliveryDate && (
                 <p className="mt-1">
-                  Estimated Delivery: {formatDate(order.tracking.estimatedDeliveryDate)}
+                  Estimated Delivery: {(() => {
+                    try {
+                      return formatDate(order.trackingInfo.estimatedDeliveryDate);
+                    } catch (error) {
+                      console.warn('Error formatting delivery date:', order.trackingInfo.estimatedDeliveryDate, error);
+                      return 'Invalid Date';
+                    }
+                  })()}
                 </p>
               )}
             </div>
@@ -206,51 +274,57 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
         <div className="border-t border-gray-200">
           <h3 className="sr-only">Items</h3>
           <ul role="list" className="divide-y divide-gray-200">
-            {order.items.map((item) => (
-              <li key={item.id} className="p-4 sm:p-6">
-                <div className="flex items-center sm:items-start">
-                  <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden sm:w-24 sm:h-24">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-center object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        No image
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 ml-6 text-sm">
-                    <div className="font-medium text-gray-900 sm:flex sm:justify-between">
-                      <h4>{item.name}</h4>
-                      <p className="mt-2 sm:mt-0">{formatPrice(item.price * item.quantity)}</p>
-                    </div>
-                    <div className="mt-2 flex text-gray-500">
-                      <p className="mr-4">{formatPrice(item.price)} × {item.quantity}</p>
-                      {(item.selectedColor || item.selectedSize) && (
-                        <p>
-                          {item.selectedColor && `Color: ${item.selectedColor}`}
-                          {item.selectedColor && item.selectedSize && ' / '}
-                          {item.selectedSize && `Size: ${item.selectedSize}`}
-                        </p>
+            {order.items && order.items.length > 0 ? (
+              order.items.map((item) => (
+                <li key={item.id} className="p-4 sm:p-6">
+                  <div className="flex items-center sm:items-start">
+                    <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden sm:w-24 sm:h-24">
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-center object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          No image
+                        </div>
                       )}
                     </div>
-                    {item.productId && (
-                      <div className="mt-2">
-                        <Link
-                          href={`/products/${item.productId}`}
-                          className="text-sm font-medium text-primary-600 hover:text-primary-500"
-                        >
-                          View Product
-                        </Link>
+                    <div className="flex-1 ml-6 text-sm">
+                      <div className="font-medium text-gray-900 sm:flex sm:justify-between">
+                        <h4>{item.name}</h4>
+                        <p className="mt-2 sm:mt-0">{formatPrice(item.price * item.quantity)}</p>
                       </div>
-                    )}
+                      <div className="mt-2 flex text-gray-500">
+                        <p className="mr-4">{formatPrice(item.price)} × {item.quantity}</p>
+                        {(item.selectedColor || item.selectedSize) && (
+                          <p>
+                            {item.selectedColor && `Color: ${item.selectedColor}`}
+                            {item.selectedColor && item.selectedSize && ' / '}
+                            {item.selectedSize && `Size: ${item.selectedSize}`}
+                          </p>
+                        )}
+                      </div>
+                      {item.productId && (
+                        <div className="mt-2">
+                          <Link
+                            href={`/products/${item.productId}`}
+                            className="text-sm font-medium text-primary-600 hover:text-primary-500"
+                          >
+                            View Product
+                          </Link>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </li>
+              ))
+            ) : (
+              <li className="p-4 sm:p-6">
+                <p>No items found in this order.</p>
               </li>
-            ))}
+            )}
           </ul>
         </div>
 
@@ -283,7 +357,14 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
                 <li key={note.id} className="py-3">
                   <div className="text-sm text-gray-600">{note.message}</div>
                   <div className="mt-1 text-xs text-gray-500">
-                    {formatDate(note.createdAt)}
+                    {(() => {
+                      try {
+                        return formatDate(note.createdAt);
+                      } catch (error) {
+                        console.warn('Error formatting note date:', note.createdAt, error);
+                        return 'Invalid Date';
+                      }
+                    })()}
                   </div>
                 </li>
               ))}

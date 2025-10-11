@@ -108,7 +108,7 @@ export function filterProducts(
  */
 export function formatPrice(
   price: number,
-  currency: string = 'USD',
+  currency: string = 'NGN',
   minimumFractionDigits: number = 0,
   maximumFractionDigits: number = 0
 ): string {

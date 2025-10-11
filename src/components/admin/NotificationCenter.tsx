@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, orderBy, limit, getDocs, updateDoc, doc, where, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
+import { formatCurrency } from '@/lib/utils/format';
 
 // Define notification types
 export type NotificationType = 'order' | 'alert' | 'info' | 'system';
@@ -152,7 +153,7 @@ export default function NotificationCenter({ className = '' }: NotificationCente
               const notification = {
                 type: 'order',
                 title: 'New Order Received',
-                message: `Order #${orderData.orderNumber || change.doc.id} has been placed for ${formatCurrency(orderData.total || 0)}`,
+                message: `Order #${orderData.orderNumber || change.doc.id} has been placed for ${formatCurrency(orderData.total || 0, 'NGN')}`,
                 time: Timestamp.now(),
                 read: false,
                 actionUrl: `/admin/orders/${change.doc.id}`,
@@ -177,13 +178,6 @@ export default function NotificationCenter({ className = '' }: NotificationCente
       }
     };
 
-    // Helper function to format currency
-    const formatCurrency = (amount: number) => {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(amount);
-    };
 
     let unsubscribe: (() => void) | undefined;
     setupOrderListener().then((unsub) => {

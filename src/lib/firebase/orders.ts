@@ -18,6 +18,7 @@ import {
 } from '../types';
 import { generateOrderNumber } from '../utils';
 import { createCustomerFromOrder } from './createCustomerFromOrder';
+import { CustomerCreationRetryHandler } from './utils/customerRetry';
 
 // Collection reference
 const ORDERS_COLLECTION = 'orders';
@@ -78,6 +79,12 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 
       }
     };
 
+    console.log('Firebase createOrder: Order data prepared with timestamps:', {
+      createdAt: newOrderData.createdAt,
+      updatedAt: newOrderData.updatedAt,
+      createdAtType: typeof newOrderData.createdAt
+    });
+
     console.log('Firebase createOrder: Prepared order data with timestamps');
     console.log('Firebase createOrder: Collection path:', ordersRef.path);
 
@@ -92,20 +99,35 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 
       ...newOrderData
     } as Order;
 
-    // Create or update customer record for this order
+    // Create or update customer record for this order with retry logic
     try {
       console.log('Firebase createOrder: Creating/updating customer record from order');
-      // We don't await this to avoid blocking the order creation
-      createCustomerFromOrder(docRef.id)
-        .then(customerId => {
-          console.log(`Firebase createOrder: Created/updated customer ${customerId} from order ${docRef.id}`);
-        })
-        .catch(error => {
-          console.error(`Firebase createOrder: Error creating customer from order ${docRef.id}:`, error);
-        });
+      const customerId = await CustomerCreationRetryHandler.retryCustomerCreation(
+        () => createCustomerFromOrder(docRef.id),
+        { maxAttempts: 3, delayMs: 1000 }
+      );
+      console.log(`Firebase createOrder: Successfully created/updated customer ${customerId} from order ${docRef.id}`);
     } catch (customerError) {
-      console.error('Error initiating customer creation:', customerError);
-      // Don't throw error here, just log it - we still want to return the order
+      console.error(`Firebase createOrder: CRITICAL ERROR - Failed to create customer from order ${docRef.id} after retries:`, customerError);
+      console.error('Firebase createOrder: Error details:', {
+        message: customerError instanceof Error ? customerError.message : 'Unknown error',
+        stack: customerError instanceof Error ? customerError.stack : 'No stack trace',
+        orderId: docRef.id,
+        orderData: {
+          email: orderData.email,
+          customerName: orderData.customerName,
+          total: orderData.total
+        }
+      });
+
+      // Schedule for later processing if immediate creation fails
+      CustomerCreationRetryHandler.scheduleCustomerCreationForLater(
+        docRef.id,
+        customerError instanceof Error ? customerError.message : 'Unknown error'
+      );
+
+      // Don't fail the order creation - the customer can be created later
+      // This ensures orders are never lost due to customer creation issues
     }
 
     console.log('Firebase createOrder: Returning created order with ID:', docRef.id);
@@ -362,6 +384,7 @@ export async function getOrders(
 
     // Use admin Firestore to bypass security rules if specified
     let dbToUse;
+    let ordersCollection;
     try {
       if (useAdminDb) {
         dbToUse = getAdminFirestore();
@@ -369,8 +392,11 @@ export async function getOrders(
           console.error('Firebase getOrders: Admin Firestore is null or undefined');
           throw new Error('Admin Firestore initialization failed');
         }
+        // For admin Firestore, we need to use admin-specific collection reference
+        ordersCollection = dbToUse.collection(ORDERS_COLLECTION);
       } else {
         dbToUse = db;
+        ordersCollection = collection(dbToUse, ORDERS_COLLECTION);
       }
       console.log('Firebase getOrders: DB instance obtained successfully');
     } catch (dbError) {
@@ -378,9 +404,8 @@ export async function getOrders(
       // Fallback to client DB if admin DB fails
       console.log('Firebase getOrders: Falling back to client DB');
       dbToUse = db;
+      ordersCollection = collection(dbToUse, ORDERS_COLLECTION);
     }
-
-    const ordersCollection = collection(dbToUse, ORDERS_COLLECTION);
     console.log('Firebase getOrders: Using admin DB?', useAdminDb);
     console.log('Firebase getOrders: Collection path:', ORDERS_COLLECTION);
 
@@ -448,7 +473,7 @@ export async function getOrders(
 
     // Execute query
     console.log('Firebase getOrders: Executing query with constraints:', constraints.length);
-    const q = query(ordersCollection, ...constraints);
+    const q = query(ordersCollection as any, ...constraints);
     const querySnapshot = await getDocs(q);
     console.log('Firebase getOrders: Query executed, document count:', querySnapshot.size);
 
@@ -457,7 +482,7 @@ export async function getOrders(
       const data = doc.data();
       return {
         id: doc.id,
-        ...data
+        ...(data as any)
       };
     }) as Order[];
 

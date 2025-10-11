@@ -1,17 +1,43 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FiShoppingBag, FiHeart, FiStar } from 'react-icons/fi';
+import { FiShoppingBag, FiHeart, FiStar, FiCheck } from 'react-icons/fi';
 import { Product } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
+import { useCart } from '@/lib/context/CartContext';
+import { useWishlist } from '@/lib/context/WishlistContext';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const [isAdding, setIsAdding] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsAdding(true);
+
+    // Add item to cart
+    addToCart(product, 1);
+
+    // Show success state
+    setIsAdded(true);
+    setIsAdding(false);
+
+    // Reset success state after 2 seconds
+    setTimeout(() => {
+      setIsAdded(false);
+    }, 2000);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -26,32 +52,62 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <motion.img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover pointer-events-none"
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.6 }}
           />
 
           {/* Overlay with quick actions */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300">
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
               <motion.button
+                type="button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-full bg-white text-gray-900 py-2 rounded-md font-medium flex items-center justify-center"
+                onClick={handleQuickAdd}
+                disabled={isAdding}
+                className={`w-full py-2 rounded-md font-medium flex items-center justify-center transition-colors relative z-10 pointer-events-auto ${
+                  isAdded
+                    ? 'bg-green-600 text-white'
+                    : isAdding
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    : 'bg-white text-gray-900 hover:bg-gray-50'
+                }`}
               >
-                <FiShoppingBag className="mr-2" /> Quick Add
+                {isAdded ? (
+                  <>
+                    <FiCheck className="mr-2" /> Added!
+                  </>
+                ) : isAdding ? (
+                  <>
+                    <FiShoppingBag className="mr-2 animate-pulse" /> Adding...
+                  </>
+                ) : (
+                  <>
+                    <FiShoppingBag className="mr-2" /> Quick Add
+                  </>
+                )}
               </motion.button>
             </div>
           </div>
 
           {/* Wishlist button */}
           <motion.button
+            type="button"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md text-gray-700 hover:text-accent-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            aria-label="Add to wishlist"
+            className="absolute top-2 right-2 bg-white p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 relative z-10 pointer-events-auto"
+            aria-label="Toggle wishlist"
+            aria-pressed={isInWishlist(product.id.toString())}
+            data-cy="wishlist-btn"
+            data-product-id={product.id}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist(product.id.toString());
+            }}
           >
-            <FiHeart size={18} />
+            <FiHeart size={18} className={isInWishlist(product.id.toString()) ? 'text-accent-600' : 'text-gray-700 hover:text-accent-500'} />
           </motion.button>
 
           {/* Tags */}

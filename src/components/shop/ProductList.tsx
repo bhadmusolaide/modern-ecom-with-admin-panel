@@ -9,6 +9,7 @@ import { FiShoppingBag, FiHeart, FiStar, FiCheckCircle } from 'react-icons/fi';
 import { formatPrice } from '@/lib/utils';
 import { Product } from '@/lib/types';
 import { useCart } from '@/lib/context/CartContext';
+import { useWishlist } from '@/lib/context/WishlistContext';
 
 interface ProductListProps {
   products: Product[];
@@ -17,7 +18,9 @@ interface ProductListProps {
 
 const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) => {
   const { addToCart } = useCart();
-  const [addingProductId, setAddingProductId] = useState<number | null>(null);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  // Change the type to string to match product.id
+  const [addingProductId, setAddingProductId] = useState<string | null>(null);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -36,7 +39,8 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
 
   const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
-    setAddingProductId(product.id);
+    e.stopPropagation(); // Add this to prevent event bubbling
+    setAddingProductId(product.id.toString());
 
     // Add product to cart with default quantity of 1
     addToCart(product, 1);
@@ -74,37 +78,44 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
             variants={itemVariants}
             className="group"
           >
-            <Link href={`/shop/product/${product.id}`} className="block" prefetch={false}>
+            {/* Fixed: Separated Link from the button to prevent navigation on button click */}
+            <div className="block">
               <div className="relative overflow-hidden rounded-lg aspect-w-3 aspect-h-4 bg-gray-100">
-                {product.image ? (
-                  <ProxiedImage
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )}
+                {/* Moved Link to only wrap the image and name */}
+                <Link href={`/shop/product/${product.id}`} prefetch={false} data-cy="product-link" data-product-id={product.id}>
+                  {product.image ? (
+                    <ProxiedImage
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                      <span className="text-gray-400">No image</span>
+                    </div>
+                  )}
+                </Link>
 
                 {/* Overlay with quick actions */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300">
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 pointer-events-none">
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <motion.button
+                      type="button"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className={`w-full py-2 rounded-md font-medium flex items-center justify-center ${
-                        addingProductId === product.id
+                      className={`w-full py-2 rounded-md font-medium flex items-center justify-center relative z-10 pointer-events-auto ${
+                        addingProductId === product.id.toString()
                           ? 'bg-primary-600 text-white'
                           : 'bg-white text-gray-900'
                       }`}
+                      data-cy="quick-add"
+                      data-product-id={product.id}
                       onClick={(e) => handleQuickAdd(e, product)}
-                      disabled={addingProductId === product.id}
+                      disabled={addingProductId === product.id.toString()}
                     >
-                      {addingProductId === product.id ? (
+                      {addingProductId === product.id.toString() ? (
                         <>
                           <FiCheckCircle className="mr-2" /> Added
                         </>
@@ -119,16 +130,21 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
 
                 {/* Wishlist button */}
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="absolute top-2 right-2 bg-white w-7 h-7 flex items-center justify-center rounded-full shadow-md text-gray-700 hover:text-accent-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  aria-label="Add to wishlist"
+                  className="absolute top-2 right-2 bg-white w-7 h-7 flex items-center justify-center rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto"
+                  aria-label="Toggle wishlist"
+                  aria-pressed={isInWishlist(product.id.toString())}
+                  data-cy="wishlist-btn"
+                  data-product-id={product.id}
                   onClick={(e) => {
                     e.preventDefault();
-                    // Add wishlist functionality here
+                    e.stopPropagation();
+                    toggleWishlist(product.id.toString());
                   }}
                 >
-                  <FiHeart className="w-4 h-4" />
+                  <FiHeart className={`w-4 h-4 ${isInWishlist(product.id.toString()) ? 'text-accent-600' : 'text-gray-700 hover:text-accent-500'}`} />
                 </motion.button>
 
                 {/* Tags */}
@@ -152,7 +168,9 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
                   <div>
                     <div className="text-sm text-gray-500 mb-1">{product.categoryName || 'Uncategorized'}</div>
                     <h3 className="font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
-                      {product.name}
+                      <Link href={`/shop/product/${product.id}`} prefetch={false} data-cy="product-link" data-product-id={product.id}>
+                        {product.name}
+                      </Link>
                     </h3>
                   </div>
                   <div className="text-right">
@@ -184,7 +202,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
                   </div>
                 )}
               </div>
-            </Link>
+            </div>
           </motion.div>
         ))}
       </motion.div>
@@ -246,7 +264,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
                   <div>
                     <div className="text-sm text-gray-500 mb-1">{product.categoryName || 'Uncategorized'}</div>
                     <h3 className="text-lg font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
-                      <Link href={`/shop/product/${product.id}`} prefetch={false}>
+                      <Link href={`/shop/product/${product.id}`} prefetch={false} data-cy="product-link" data-product-id={product.id}>
                         {product.name}
                       </Link>
                     </h3>
@@ -306,18 +324,22 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
               {/* Actions */}
               <div className="mt-4 flex items-center space-x-4">
                 <button
+                  type="button"
                   className={`flex-1 px-4 py-2 rounded-md font-medium flex items-center justify-center ${
-                    addingProductId === product.id
+                    addingProductId === product.id.toString()
                       ? 'bg-primary-600 text-white'
                       : 'bg-primary-600 text-white hover:bg-primary-700 transition-colors'
                   }`}
+                  data-cy="quick-add"
+                  data-product-id={product.id}
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleQuickAdd(e, product);
                   }}
-                  disabled={addingProductId === product.id}
+                  disabled={addingProductId === product.id.toString()}
                 >
-                  {addingProductId === product.id ? (
+                  {addingProductId === product.id.toString() ? (
                     <>
                       <FiCheckCircle className="mr-2" /> Added to Cart
                     </>
@@ -328,14 +350,18 @@ const ProductList: React.FC<ProductListProps> = ({ products, view = 'grid' }) =>
                   )}
                 </button>
                 <button
-                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300 hover:border-primary-600 hover:text-primary-600 transition-colors"
-                  aria-label="Add to wishlist"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300 transition-colors pointer-events-auto"
+                  aria-label="Toggle wishlist"
+                  aria-pressed={isInWishlist(product.id.toString())}
+                  data-cy="wishlist-btn"
+                  data-product-id={product.id}
                   onClick={(e) => {
                     e.preventDefault();
-                    // Add wishlist functionality here
+                    e.stopPropagation();
+                    toggleWishlist(product.id.toString());
                   }}
                 >
-                  <FiHeart className="w-4 h-4" />
+                  <FiHeart className={`w-4 h-4 ${isInWishlist(product.id.toString()) ? 'text-accent-600' : 'hover:text-primary-600'}`} />
                 </button>
               </div>
             </div>

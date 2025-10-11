@@ -24,7 +24,7 @@ export const formatOrderForExport = (order: Order) => {
   
   // Format items
   const itemsList = order.items.map(item => 
-    `${item.name} (${item.quantity} x ${(item.price / 100).toFixed(2)})`
+    `${item.name} (${item.quantity} x ${item.price.toFixed(2)})`
   ).join('; ');
   
   // Format tracking info
@@ -48,11 +48,11 @@ export const formatOrderForExport = (order: Order) => {
     'Customer Name': order.customerName,
     'Email': order.email,
     'Items': itemsList,
-    'Subtotal': (order.subtotal / 100).toFixed(2),
-    'Shipping': (order.shippingCost / 100).toFixed(2),
-    'Tax': (order.tax / 100).toFixed(2),
-    'Discount': order.discount ? (order.discount / 100).toFixed(2) : '0.00',
-    'Total': (order.total / 100).toFixed(2),
+    'Subtotal': order.subtotal.toFixed(2),
+    'Shipping': order.shippingCost.toFixed(2),
+    'Tax': order.tax.toFixed(2),
+    'Discount': order.discount ? order.discount.toFixed(2) : '0.00',
+    'Total': order.total.toFixed(2),
     'Payment Method': paymentInfo,
     'Shipping Method': order.shippingMethod.name,
     'Shipping Address': formattedShippingAddress,

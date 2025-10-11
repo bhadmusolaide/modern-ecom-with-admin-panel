@@ -25,6 +25,34 @@ export default function AccountPage() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="container mx-auto py-12 px-4">
+        <div className="flex flex-col justify-center items-center h-64 text-center">
+          <div className="bg-gray-100 p-6 rounded-full mb-4">
+            <User className="h-12 w-12 text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-6">You need to be logged in to access your account.</p>
+          <div className="space-x-4">
+            <Button
+              onClick={() => router.push('/auth/login')}
+              className="bg-primary-600 hover:bg-primary-700 text-white"
+            >
+              Sign In
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/')}
+            >
+              Go Home
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-12 px-4">
       <motion.div
@@ -133,11 +161,29 @@ export default function AccountPage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Last Login</p>
-                        <p className="mt-1">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}</p>
+                        <p className="mt-1">{(() => {
+                          try {
+                            if (!user.lastLoginAt) return 'Never';
+                            const date = new Date(user.lastLoginAt);
+                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
+                          } catch (error) {
+                            console.warn('Invalid lastLoginAt date:', user.lastLoginAt, error);
+                            return 'Invalid Date';
+                          }
+                        })()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Account Created</p>
-                        <p className="mt-1">{user.createdAt ? new Date(user.createdAt).toLocaleString() : 'Unknown'}</p>
+                        <p className="mt-1">{(() => {
+                          try {
+                            if (!user.createdAt) return 'Unknown';
+                            const date = new Date(user.createdAt);
+                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
+                          } catch (error) {
+                            console.warn('Invalid createdAt date:', user.createdAt, error);
+                            return 'Invalid Date';
+                          }
+                        })()}</p>
                       </div>
                     </div>
                   </Card>

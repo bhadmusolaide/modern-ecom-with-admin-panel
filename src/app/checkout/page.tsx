@@ -11,6 +11,7 @@ import { useToast } from '@/lib/context/ToastContext';
 import { validateOrderInventory } from '@/lib/firebase/inventory';
 import { InventoryStatus } from '@/lib/types';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
+import { formatPrice } from '@/lib/utils';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -174,7 +175,7 @@ export default function CheckoutPage() {
           status: 'COMPLETED',
           provider: 'BYPASS',
           amount: cart.subtotal + (cart.subtotal * 0.08),
-          currency: 'USD',
+          currency: 'NGN',
           datePaid: new Date().toISOString()
         },
         status: 'PROCESSING',
@@ -299,7 +300,7 @@ export default function CheckoutPage() {
                     <h4 className="text-sm font-medium text-gray-900">{item.name}</h4>
                     <div className="flex items-center mt-1">
                       <span className="text-xs text-gray-500">
-                        {item.quantity} × ${item.price.toFixed(2)}
+                        {item.quantity} × {formatPrice(item.price, 'NGN', 2, 2)}
                       </span>
                       <span className="mx-1 text-gray-300">|</span>
                       <span className="text-xs text-gray-500">
@@ -310,7 +311,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium text-sm">${(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="font-medium text-sm">{formatPrice(item.price * item.quantity, 'NGN', 2, 2)}</span>
                   </div>
                 </div>
               ))}
@@ -319,20 +320,20 @@ export default function CheckoutPage() {
             <div className="space-y-2 pt-4 border-t border-gray-200">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${cart.subtotal.toFixed(2)}</span>
+                <span className="font-medium">{formatPrice(cart.subtotal, 'NGN', 2, 2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">{formatPrice(0, 'NGN', 2, 2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Tax</span>
-                <span className="font-medium">${(cart.subtotal * 0.08).toFixed(2)}</span>
+                <span className="font-medium">{formatPrice(cart.subtotal * 0.08, 'NGN', 2, 2)}</span>
               </div>
               <div className="h-px bg-gray-200 my-4"></div>
               <div className="flex justify-between">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-lg font-bold">${(cart.subtotal + cart.subtotal * 0.08).toFixed(2)}</span>
+                <span className="text-lg font-bold">{formatPrice(cart.subtotal + cart.subtotal * 0.08, 'NGN', 2, 2)}</span>
               </div>
             </div>
           </div>

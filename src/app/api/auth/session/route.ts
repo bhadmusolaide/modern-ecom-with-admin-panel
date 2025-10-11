@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { db } from '@/lib/firebase/admin';
+import { getAdminFirestore } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       try {
         if (access.userId) {
           // First check if the user document exists
+          const db = getAdminFirestore();
           const userRef = db.collection('users').doc(access.userId);
           const userDoc = await userRef.get();
 

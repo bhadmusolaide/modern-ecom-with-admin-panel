@@ -22,7 +22,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useToast } from '@/lib/context/ToastContext';
-import { User as UserType, CustomerSegment } from '@/lib/types';
+import { Customer, CustomerSegment } from '@/lib/types';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
 import {
   getCustomers,
@@ -46,8 +46,8 @@ function CustomersPage() {
   const router = useRouter();
 
   // State
-  const [customers, setCustomers] = useState<UserType[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<UserType[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [segments, setSegments] = useState<CustomerSegment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,6 +80,8 @@ function CustomersPage() {
           }
 
           console.log(`Customers page: Successfully fetched ${result.customers.length} customers`);
+          console.log('Customers page: First customer sample:', result.customers.length > 0 ? JSON.stringify(result.customers[0], null, 2) : 'No customers');
+          console.log('Customers page: All customers:', result.customers.map(c => ({ id: c.id, email: c.email, name: c.name, isActive: c.isActive })));
           setCustomers(result.customers);
           setFilteredCustomers(result.customers);
         } catch (customersError) {
@@ -205,7 +207,7 @@ function CustomersPage() {
   };
 
   // Define columns for the responsive table
-  const columns: Column<UserType>[] = [
+  const columns: Column<Customer>[] = [
     {
       header: 'Customer',
       accessor: 'name',

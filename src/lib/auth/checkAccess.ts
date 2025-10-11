@@ -1,6 +1,5 @@
-import { getAuth } from 'firebase-admin/auth';
 import { NextRequest } from 'next/server';
-import { db } from '../firebase/admin';
+import { getAdminAuth, getAdminFirestore } from '../firebase/admin';
 
 export interface AuthResult {
   authenticated: boolean;
@@ -64,7 +63,7 @@ export async function checkAccess(req: NextRequest): Promise<AuthResult> {
     console.log('checkAccess: Verifying Firebase token');
 
     try {
-      const auth = getAuth();
+      const auth = getAdminAuth();
       console.log('checkAccess: Got Firebase Admin auth instance');
 
       const decoded = await auth.verifyIdToken(token);
@@ -79,6 +78,7 @@ export async function checkAccess(req: NextRequest): Promise<AuthResult> {
       if (!isAdmin) {
         try {
           console.log(`checkAccess: Checking Firestore for admin role for user ${decoded.uid}`);
+          const db = getAdminFirestore();
           const userRef = db.collection('users').doc(decoded.uid);
           const userDoc = await userRef.get();
 

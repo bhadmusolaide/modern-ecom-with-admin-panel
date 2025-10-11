@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         status: PaymentStatus.PENDING,
         provider: orderData.payment?.provider || 'CREDIT_CARD',
         amount: orderData.total || (orderData.subtotal + (orderData.tax || 0)),
-        currency: orderData.payment?.currency || 'USD'
+        currency: orderData.payment?.currency || 'NGN'
       }
     };
 
@@ -224,6 +224,8 @@ export async function GET(request: NextRequest) {
     // Get orders with filters
     console.log('Orders API: Fetching orders with filters:', JSON.stringify(filters, null, 2));
     console.log('Orders API: Pagination:', { page, pageSize });
+    console.log('Orders API: User ID from auth:', userId);
+    console.log('Orders API: User email from auth:', userEmail);
 
     let result;
     try {
@@ -239,15 +241,20 @@ export async function GET(request: NextRequest) {
         if (!access.isAdmin) {
           console.log('Orders API: Getting orders for authenticated user');
           console.log('Orders API: User ID:', filters.userId);
-          
+          console.log('Orders API: User email:', filters.email);
+
           // First, get orders by userId (authenticated user orders)
           const userOrdersResult = await getOrders(
             { userId: filters.userId, sortBy: 'createdAt', sortDirection: 'desc' },
             { pageSize: 100 }, // Get more to ensure we have enough after combining
             true // Use admin DB
           );
-          
+
           console.log('Orders API: Found user orders:', userOrdersResult.orders.length);
+          if (userOrdersResult.orders.length > 0) {
+            console.log('Orders API: First user order ID:', userOrdersResult.orders[0].id);
+            console.log('Orders API: First user order userId:', userOrdersResult.orders[0].userId);
+          }
 
           let combinedOrders = [...userOrdersResult.orders];
           const orderIds = new Set(combinedOrders.map(order => order.id));
@@ -305,7 +312,7 @@ export async function GET(request: NextRequest) {
           console.log('Orders API: Admin user - using standard query with filters');
           result = await getOrders(
             filters,
-            { page, pageSize },
+            { pageSize },
             true // Use admin DB
           );
           

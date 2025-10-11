@@ -5,6 +5,7 @@ import { ToastProvider } from "@/lib/context/ToastContext";
 import { SiteSettingsProvider } from "@/lib/context/SiteSettingsContext";
 import { FirebaseAuthProvider } from "@/lib/firebase/auth/FirebaseAuthProvider";
 import { CartProvider } from "@/lib/context/CartContext";
+import { WishlistProvider } from "@/lib/context/WishlistContext";
 import { ThemeProvider } from "@/lib/context/ThemeProvider";
 import { MetadataWrapper } from "@/components/layout/MetadataWrapper";
 import { HeaderWrapper } from "@/components/layout/Header";
@@ -19,17 +20,19 @@ export default function ClientWrapper({ children }: { children: React.ReactNode 
         <FirebaseAuthProvider>
           <SiteSettingsProvider>
             <CartProvider>
-              <ThemeProvider>
-                <MetadataWrapper>
-                  <HeaderWrapper />
-                  <main>
-                    <PageWrapper>
-                      {children}
-                    </PageWrapper>
-                  </main>
-                  <FooterWrapper />
-                </MetadataWrapper>
-              </ThemeProvider>
+              <WishlistProvider>
+                <ThemeProvider>
+                  <MetadataWrapper>
+                    <HeaderWrapper />
+                    <main>
+                      <PageWrapper>
+                        {children}
+                      </PageWrapper>
+                    </main>
+                    <FooterWrapper />
+                  </MetadataWrapper>
+                </ThemeProvider>
+              </WishlistProvider>
             </CartProvider>
           </SiteSettingsProvider>
         </FirebaseAuthProvider>
