@@ -5,12 +5,6 @@ import { auth, db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
 // Validation schema
 const createUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').optional(),
@@ -36,8 +30,6 @@ export async function POST(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Parse and validate request body
     const body = await request.json();

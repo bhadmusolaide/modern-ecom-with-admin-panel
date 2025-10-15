@@ -3,12 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
 // Supabase imports
 import {
   getPathFromUrl,
@@ -86,8 +80,7 @@ export async function POST(request: NextRequest) {
 
         let uploadResult;
 
-
-        // Use server-side admin client for Supabase uploads
+// Use server-side admin client for Supabase uploads
         const { error } = await uploadFileAdmin(
           BUCKET_UPLOADS,
           path,
@@ -110,7 +103,6 @@ export async function POST(request: NextRequest) {
         uploadResult = { url: urlData.publicUrl };
 
         // Log metadata for debugging
-        console.log('File metadata:', metadata);
 
         return {
           path,
@@ -127,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // If only one file was uploaded, return a simplified response
     if (files.length === 1) {
-      console.log('Upload API - Returning single file URL:', results[0].url);
+
       return createApiResponse({
         success: true,
         url: results[0].url,
@@ -135,7 +127,7 @@ export async function POST(request: NextRequest) {
        });
     } else {
       // Multiple files - return array of URLs
-      console.log('Upload API - Returning multiple file URLs:', results.map(r => r.url));
+
       return createApiResponse({
         success: true,
         urls: results.map(r => r.url),
@@ -210,7 +202,6 @@ async function handleUrlUpload(request: NextRequest) {
     const uploadPromises = urls.map(async (url) => {
       try {
         // Log the URL being processed
-        console.log(`Processing image from URL: ${url}`);
 
         // Try to process the image from the URL
         const processedResult = await processImageFromUrl(url, processingOptions);
@@ -261,11 +252,8 @@ async function handleUrlUpload(request: NextRequest) {
         uploadResult = { url: urlData.publicUrl };
 
         // Log metadata for debugging
-        console.log('File metadata:', metadata);
 
-        console.log(`Successfully processed and uploaded image from URL: ${url}`);
-
-        return {
+return {
           path,
           url: uploadResult.url,
           metadata
@@ -293,7 +281,7 @@ async function handleUrlUpload(request: NextRequest) {
     // Return appropriate response based on whether it was a single URL or multiple URLs
     if (data.url) {
       // Single URL case - return the first result directly
-      console.log('URL Upload API - Returning single URL result:', results[0].url);
+
       return createApiResponse({
         success: true,
         url: results[0].url,
@@ -301,7 +289,7 @@ async function handleUrlUpload(request: NextRequest) {
        });
     } else {
       // Multiple URLs case - return array of URLs
-      console.log('URL Upload API - Returning multiple URL results:', results.map(r => r.url));
+
       return createApiResponse({
         success: true,
         urls: results.map(r => r.url),

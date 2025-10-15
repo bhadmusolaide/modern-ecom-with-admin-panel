@@ -5,8 +5,6 @@ import { db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
 // Validation schema
 const updatePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),

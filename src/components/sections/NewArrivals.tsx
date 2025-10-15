@@ -41,7 +41,7 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({ sectionData }) => {
         if (newArrivalsProducts && newArrivalsProducts.length > 0) {
           setProducts(newArrivalsProducts);
         } else {
-          console.log('No new arrivals found in database, using fallback products');
+
           setProducts(fallbackProducts);
         }
       } catch (error) {
@@ -71,9 +71,7 @@ const NewArrivals: React.FC<NewArrivalsProps> = ({ sectionData }) => {
     visible: { opacity: 1, y: 0 },
   };
 
-
-
-  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
+const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     setAddingProductId(product.id);
 

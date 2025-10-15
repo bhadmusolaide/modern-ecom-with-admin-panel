@@ -32,7 +32,7 @@ export { GET, POST, auth };
  * @deprecated Use checkAccess from @/lib/auth/checkAccess instead
  */
 export async function verifyToken(token: string) {
-  console.warn('verifyToken is deprecated. Use checkAccess from @/lib/auth/checkAccess instead.');
+
   try {
     const decodedToken = await getAuth().verifyIdToken(token);
     return decodedToken;

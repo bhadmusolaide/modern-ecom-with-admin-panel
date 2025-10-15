@@ -19,9 +19,7 @@ export default function StorageImage({ src, fallbackSrc, alt, showNoImageMessage
   const [error, setError] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-
-
-  useEffect(() => {
+useEffect(() => {
     // Reset state when src changes
     if (src) {
       // Check if it's a Supabase URL

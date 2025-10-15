@@ -17,7 +17,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   isSaving = false
 }) => {
   // Debug props
-  console.log('ActionButtons props:', { hasChanges, isSaving });
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 shadow-lg z-40">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">

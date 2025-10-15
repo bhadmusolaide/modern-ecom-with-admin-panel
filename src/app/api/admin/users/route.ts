@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
 export async function GET(request: NextRequest) {
   try {
     // Unified auth check
@@ -19,8 +18,6 @@ export async function GET(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Get only admin users from Firestore (not customers)
     const usersSnapshot = await db.collection('users')

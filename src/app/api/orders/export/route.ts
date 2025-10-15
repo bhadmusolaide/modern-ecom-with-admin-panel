@@ -32,8 +32,6 @@ export async function GET(request: NextRequest) {
     return createErrorResponse('Forbidden. Admin access required.', 403);
   }
 
-  console.log('Admin access granted for user:', access.userId);
-
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format') || 'csv';
@@ -73,7 +71,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all orders (no pagination for export)
-    console.log('Export API: Fetching orders with filters:', JSON.stringify(filters, null, 2));
+
     const result = await getOrders(
       filters,
       { pageSize: 1000 }, // Large page size for export
@@ -85,7 +83,6 @@ export async function GET(request: NextRequest) {
     }
 
     const orders = result.orders;
-    console.log(`Export API: Found ${orders.length} orders to export`);
 
     // Format the orders for export
     if (format === 'json') {

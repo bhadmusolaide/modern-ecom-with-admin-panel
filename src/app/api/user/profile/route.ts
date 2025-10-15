@@ -4,7 +4,6 @@ import { auth, db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
 // Validation schema
 const updateProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),

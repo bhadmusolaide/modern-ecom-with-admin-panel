@@ -177,7 +177,7 @@ export default function AccountPage() {
                             const date = new Date(user.lastLoginAt);
                             return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
                           } catch (error) {
-                            console.warn('Invalid lastLoginAt date:', user.lastLoginAt, error);
+
                             return 'Invalid Date';
                           }
                         })()}</p>
@@ -190,7 +190,7 @@ export default function AccountPage() {
                             const date = new Date(user.createdAt);
                             return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
                           } catch (error) {
-                            console.warn('Invalid createdAt date:', user.createdAt, error);
+
                             return 'Invalid Date';
                           }
                         })()}</p>

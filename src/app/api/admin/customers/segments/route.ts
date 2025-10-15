@@ -5,11 +5,6 @@ import { db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
 // Validation schema for segment creation
 const createSegmentSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -51,8 +46,6 @@ export async function GET(request: NextRequest) {
   if (!access.isAdmin) {
     return createErrorResponse('Forbidden. Admin access required.', 403);
   }
-
-  console.log('Admin access granted for user:', access.userId);
 
     // Parse request body
     const body = await request.json();

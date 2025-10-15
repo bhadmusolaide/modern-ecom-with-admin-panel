@@ -39,8 +39,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Admin access granted for user:', access.userId);
-
     // Parse request body
     const body = await request.json();
 

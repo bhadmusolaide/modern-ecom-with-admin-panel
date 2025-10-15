@@ -3,17 +3,9 @@ import { setAdminClaims } from '@/lib/firebase/admin/setAdminClaims';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
-
 // POST /api/admin/set-admin-claims
 export async function POST(request: NextRequest) {
   try {
-    console.log('Processing set-admin-claims request');
 
     // Unified auth check
     const access = await checkAccess(request);
@@ -28,8 +20,6 @@ export async function POST(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Only admins can set admin claims.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Get the user ID from the request body
     const { uid } = await request.json();

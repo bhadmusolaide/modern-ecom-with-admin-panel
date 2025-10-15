@@ -113,7 +113,7 @@ export async function uploadToSupabase(
   while (retries <= maxRetries) {
     try {
       if (retries > 0) {
-        console.log(`Retrying upload (attempt ${retries}/${maxRetries})...`);
+
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, DEFAULT_RETRY_DELAY * retries));
       }
@@ -145,7 +145,7 @@ export async function uploadToSupabase(
         const bucketExists = buckets.some(b => b.name === bucket);
 
         if (!bucketExists) {
-          console.warn(`Bucket '${bucket}' does not exist. Attempting to create it...`);
+
           const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, {
             public: true,
             fileSizeLimit: 50 * 1024 * 1024, // 50MB limit
@@ -156,7 +156,6 @@ export async function uploadToSupabase(
             throw new Error(`Failed to create bucket '${bucket}': ${createError.message}`);
           }
 
-          console.log(`Created bucket '${bucket}' successfully`);
         }
       } catch (bucketError) {
         console.error('Error checking/creating bucket:', bucketError);
@@ -167,8 +166,7 @@ export async function uploadToSupabase(
       if (!supabaseAdmin) {
         throw new Error('Supabase admin client is not initialized');
       }
-      
-      console.log(`Uploading file to Supabase bucket '${bucket}' at path '${path}'...`);
+
       const { data, error } = await supabaseAdmin.storage
         .from(bucket)
         .upload(path, fileBuffer, options);
@@ -183,14 +181,11 @@ export async function uploadToSupabase(
         throw new Error('Upload succeeded but no data was returned');
       }
 
-      console.log('File uploaded successfully, getting public URL...');
-
       // Get public URL
       if (!supabaseAdmin) {
         throw new Error('Supabase admin client is not initialized');
       }
-      
-      console.log(`Getting public URL for file in bucket '${bucket}' at path '${path}'...`);
+
       const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
 
       if (!urlData || !urlData.publicUrl) {
@@ -198,14 +193,12 @@ export async function uploadToSupabase(
         throw new Error('Failed to get public URL for uploaded file');
       }
 
-      console.log(`Successfully got public URL: ${urlData.publicUrl}`);
-
       // Store metadata if provided
       if (metadata && Object.keys(metadata).length > 0) {
         try {
           // In Supabase, we can't directly attach metadata to files
           // We could store it in a separate table if needed
-          console.log('File metadata:', metadata);
+
           // This would be implemented with a database table in a real application
         } catch (metadataError) {
           console.error('Failed to store metadata:', metadataError);
@@ -288,7 +281,7 @@ export async function deleteFromSupabase(
   while (retries <= maxRetries) {
     try {
       if (retries > 0) {
-        console.log(`Retrying delete (attempt ${retries}/${maxRetries})...`);
+
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, DEFAULT_RETRY_DELAY * retries));
       }
@@ -346,7 +339,7 @@ export async function deleteMultipleFromSupabase(
   while (retries <= maxRetries) {
     try {
       if (retries > 0) {
-        console.log(`Retrying delete (attempt ${retries}/${maxRetries})...`);
+
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, DEFAULT_RETRY_DELAY * retries));
       }

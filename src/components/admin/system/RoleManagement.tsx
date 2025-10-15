@@ -31,13 +31,13 @@ const RoleManagement: React.FC = () => {
   useEffect(() => {
     const fetchCsrfToken = async () => {
       try {
-        console.log('RoleManagement: Fetching CSRF token...');
+
         const response = await fetch('/api/auth/csrf');
         if (!response.ok) {
           throw new Error(`Failed to fetch CSRF token: ${response.status}`);
         }
         const data = await response.json();
-        console.log('RoleManagement: CSRF token fetched successfully');
+
         setCsrfToken(data.csrfToken);
       } catch (error) {
         console.error('Error fetching CSRF token:', error);
@@ -51,13 +51,12 @@ const RoleManagement: React.FC = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        console.log('RoleManagement: Fetching roles...');
+
         setIsLoading(true);
         const data = await safeFetch('/api/admin/roles');
-        console.log('RoleManagement: Roles fetched successfully:', data.roles?.length || 0, 'roles');
 
         if (!data.roles || !Array.isArray(data.roles)) {
-          console.warn('RoleManagement: Invalid roles data, using defaults');
+
           // Import predefined roles
           const { PREDEFINED_ROLES } = await import('@/lib/rbac/types');
           setRoles(PREDEFINED_ROLES);
@@ -70,7 +69,7 @@ const RoleManagement: React.FC = () => {
 
         // Use default roles if API fails
         try {
-          console.log('RoleManagement: Using default roles');
+
           const { PREDEFINED_ROLES } = await import('@/lib/rbac/types');
           setRoles(PREDEFINED_ROLES);
         } catch (importError) {

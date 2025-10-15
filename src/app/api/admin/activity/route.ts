@@ -5,9 +5,6 @@ import { db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
 // Validation schema for activity creation
 const createActivitySchema = z.object({
   type: z.enum(['product', 'order', 'user', 'setting', 'system']),
@@ -35,8 +32,6 @@ export async function GET(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);

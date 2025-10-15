@@ -64,7 +64,6 @@ export const getCustomers = async (options: {
   };
 } = {}) => {
   try {
-    console.log('Firebase getCustomers: Starting to fetch customers');
 
     const {
       sortBy = 'createdAt',
@@ -75,10 +74,7 @@ export const getCustomers = async (options: {
       filters = {}
     } = options;
 
-    console.log(`Firebase getCustomers: Using sort ${sortBy} ${sortDirection}, limit ${limitCount}`);
-    console.log('Firebase getCustomers: Applied filters:', JSON.stringify(filters));
-
-    // Start building the query
+// Start building the query
     let customersQuery = query(customersRef);
 
     // Apply filters
@@ -149,12 +145,9 @@ export const getCustomers = async (options: {
       limit(limitCount)
     );
 
-    console.log('Firebase getCustomers: Query built, executing...');
-
     // Execute the query
     try {
       const snapshot = await getDocs(customersQuery);
-      console.log(`Firebase getCustomers: Query executed, got ${snapshot.docs.length} documents`);
 
       // Convert the documents to Customer objects
       const customers = snapshot.docs.map(doc => {
@@ -175,8 +168,6 @@ export const getCustomers = async (options: {
           };
         }
       });
-
-      console.log(`Firebase getCustomers: Successfully converted ${customers.length} customers`);
 
       // Return the customers and the last document for pagination
       return {
@@ -438,8 +429,6 @@ export const getCustomerOrders = async (
       throw new Error('Customer not found');
     }
 
-    console.log(`Getting orders for customer ${customerId} with email ${customer.email}`);
-
     // Try to get orders by customerId first (most efficient)
     let orders: any[] = [];
     let lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
@@ -476,16 +465,14 @@ export const getCustomerOrders = async (
       orders = ordersWithCustomerId;
       lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
 
-      console.log(`Found ${orders.length} orders by customerId`);
     } catch (error) {
-      console.warn('Error querying orders by customerId:', error);
+
       orders = [];
     }
 
     // If we have fewer orders than requested, try to find orders by email that might not have customerId set
     if (orders.length < limitCount && customer.email) {
       try {
-        console.log(`Looking for orders by email ${customer.email} that might be missing customerId`);
 
         // Query orders by email that don't have customerId or have a different customerId
         let orphanedOrdersQuery = query(
@@ -518,8 +505,6 @@ export const getCustomerOrders = async (
           })
           .filter(order => !order.customerId || order.customerId !== customerId);
 
-        console.log(`Found ${orphanedOrders.length} potential orphaned orders for email ${customer.email}`);
-
         // Merge and deduplicate orders
         const combinedOrders = [...orders, ...orphanedOrders];
 
@@ -540,11 +525,9 @@ export const getCustomerOrders = async (
         // For orphaned orders, we don't have a proper lastDoc, so set to null
         lastDoc = null;
 
-        console.log(`Combined result: ${orders.length} total unique orders`);
-
         // Update customerId for orphaned orders that should be linked
         if (orphanedOrders.length > 0) {
-          console.log(`Updating customerId for ${orphanedOrders.length} orphaned orders`);
+
           const batch = writeBatch(db);
 
           orphanedOrders.forEach(order => {
@@ -556,10 +539,10 @@ export const getCustomerOrders = async (
           });
 
           await batch.commit();
-          console.log(`Successfully updated customerId for orphaned orders`);
+
         }
       } catch (error) {
-        console.warn('Error finding orphaned orders by email:', error);
+
       }
     }
 
@@ -630,13 +613,10 @@ export const calculateCustomerLifetimeValue = async (customerId: string) => {
  */
 export const recalculateAllCustomerLifetimeValues = async () => {
   try {
-    console.log('Starting recalculation of all customer lifetime values');
 
     // Get all customers
     const customersSnapshot = await getDocs(customersRef);
     const customers = customersSnapshot.docs;
-
-    console.log(`Found ${customers.length} customers to recalculate`);
 
     const results = [];
 
@@ -645,7 +625,6 @@ export const recalculateAllCustomerLifetimeValues = async () => {
       const customerData = customerDoc.data();
 
       try {
-        console.log(`Recalculating lifetime value for customer ${customerId} (${customerData.email})`);
 
         const lifetimeValue = await calculateCustomerLifetimeValue(customerId);
 
@@ -659,7 +638,6 @@ export const recalculateAllCustomerLifetimeValues = async () => {
           updated: true
         });
 
-        console.log(`✅ Updated customer ${customerId}: ${lifetimeValue.totalOrders} orders, $${lifetimeValue.totalSpent}`);
       } catch (error) {
         console.error(`❌ Failed to recalculate customer ${customerId}:`, error);
         results.push({
@@ -671,7 +649,6 @@ export const recalculateAllCustomerLifetimeValues = async () => {
       }
     }
 
-    console.log('Completed recalculation of customer lifetime values');
     return results;
   } catch (error) {
     console.error('Error recalculating all customer lifetime values:', error);
@@ -694,16 +671,13 @@ export const createOrUpdateCustomerFromOrder = async (
  }
 ) => {
  try {
-   console.log('🔍 CustomerService: Starting customer creation/update for order:', orderData.id);
-   console.log('🔍 CustomerService: Order data:', JSON.stringify(orderData, null, 2));
 
-    // Check if a customer with this email already exists
-    console.log('CustomerService: Checking if customer exists with email:', orderData.email);
+// Check if a customer with this email already exists
+
     const existingCustomer = await getCustomerByEmail(orderData.email);
-    console.log('CustomerService: Existing customer result:', existingCustomer ? 'Found' : 'Not found');
 
     if (existingCustomer) {
-      console.log('CustomerService: Updating existing customer:', existingCustomer.id);
+
       // Update existing customer
       const customerRef = doc(db, CUSTOMERS_COLLECTION, existingCustomer.id);
 
@@ -717,13 +691,10 @@ export const createOrUpdateCustomerFromOrder = async (
       // Set userId if it's not already set and we have one from the order
       if (!existingCustomer.userId && orderData.userId) {
         updateData.userId = orderData.userId;
-        console.log('CustomerService: Setting userId on existing customer:', orderData.userId);
+
       }
 
-      console.log('CustomerService: Update data:', JSON.stringify(updateData, null, 2));
-
       await updateDoc(customerRef, updateData);
-      console.log('CustomerService: Customer updated successfully');
 
       // Update the order with the customer ID
       const orderRef = doc(db, ORDERS_COLLECTION, orderData.id);
@@ -731,11 +702,10 @@ export const createOrUpdateCustomerFromOrder = async (
         customerId: existingCustomer.id,
         updatedAt: serverTimestamp()
       });
-      console.log('CustomerService: Order updated with customer ID');
 
       return existingCustomer.id;
     } else {
-      console.log('CustomerService: Creating new customer for email:', orderData.email);
+
       // Create a new customer
       const newCustomerData = {
         email: orderData.email,
@@ -759,25 +729,18 @@ export const createOrUpdateCustomerFromOrder = async (
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
-  
-      console.log('CustomerService: About to create customer document with data:', JSON.stringify(newCustomerData, null, 2));
 
-      console.log('CustomerService: New customer data:', JSON.stringify(newCustomerData, null, 2));
+// Create the customer
 
-      // Create the customer
-      console.log('CustomerService: Calling addDoc on customers collection...');
       const customerRef = await addDoc(customersRef, newCustomerData);
-      console.log('CustomerService: Customer created with ID:', customerRef.id);
-      console.log('CustomerService: Customer document path:', customerRef.path);
 
-      // Update the order with the customer ID
+// Update the order with the customer ID
       const orderRef = doc(db, ORDERS_COLLECTION, orderData.id);
-      console.log('CustomerService: Updating order with customer ID:', customerRef.id);
+
       await updateDoc(orderRef, {
         customerId: customerRef.id,
         updatedAt: serverTimestamp()
       });
-      console.log('CustomerService: Order updated with new customer ID');
 
       return customerRef.id;
     }

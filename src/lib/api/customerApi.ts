@@ -13,7 +13,6 @@ import { User, CustomerSegment } from '@/lib/types';
  */
 export const getCustomers = async (options: any = {}) => {
   try {
-    console.log('customerApi: Fetching customers from API');
 
     try {
       const data = await safeFetch('/api/admin/customers');
@@ -27,8 +26,6 @@ export const getCustomers = async (options: any = {}) => {
         console.error('customerApi: No customers property in API response', data);
         throw new Error('Invalid API response format: missing customers property');
       }
-
-      console.log(`customerApi: Successfully fetched ${data.customers.length} customers from API`);
 
       return {
         customers: data.customers,
@@ -142,7 +139,6 @@ export const getCustomerOrders = async (id: string, options: any = {}) => {
  */
 export const getCustomerSegments = async () => {
   try {
-    console.log('customerApi: Fetching customer segments from API');
 
     try {
       const data = await safeFetch('/api/admin/customer-segments');
@@ -158,7 +154,6 @@ export const getCustomerSegments = async () => {
         return [];
       }
 
-      console.log(`customerApi: Successfully fetched ${data.segments.length} segments from API`);
       return data.segments;
     } catch (apiError) {
       console.error('customerApi: API error fetching segments:', apiError);

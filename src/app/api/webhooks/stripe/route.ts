@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       // Add more event handlers as needed
         
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+
     }
     
     // Return a success response
@@ -109,8 +109,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     
     // Update the order status to processing
     await updateOrderStatus(orderId, OrderStatus.PROCESSING);
-    
-    console.log(`Payment for order ${orderId} completed successfully`);
+
   } catch (error) {
     console.error('Error handling payment intent succeeded:', error);
     throw error;
@@ -137,8 +136,7 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
       paymentIntentId: paymentIntent.id,
       lastError: paymentIntent.last_payment_error?.message || 'Payment failed',
     });
-    
-    console.log(`Payment for order ${orderId} failed`);
+
   } catch (error) {
     console.error('Error handling payment intent failed:', error);
     throw error;
@@ -182,8 +180,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     if (isFullRefund) {
       await updateOrderStatus(orderId, OrderStatus.REFUNDED);
     }
-    
-    console.log(`Refund for order ${orderId} processed successfully`);
+
   } catch (error) {
     console.error('Error handling charge refunded:', error);
     throw error;
@@ -199,8 +196,7 @@ async function updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
     // This is a placeholder for the actual implementation
     // In a real application, you would update the order status in your database
-    console.log(`Updating order ${orderId} status to ${status}`);
-    
+
     // Example implementation:
     // await db.collection('orders').doc(orderId).update({ status });
   } catch (error) {

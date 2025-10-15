@@ -33,13 +33,12 @@ export async function POST(request: NextRequest) {
     const { csrfToken } = validation.data;
 
     // Verify CSRF token
-    console.log('CSRF token provided for signup:', csrfToken ? 'Yes' : 'No');
 
     if (csrfToken) {
       try {
         const isValidToken = await verifyCsrfToken(csrfToken);
         if (!isValidToken) {
-          console.warn('Invalid CSRF token provided for signup');
+
           return createErrorResponse('Invalid security token. Please refresh and try again.', 403);
         }
       } catch (csrfError) {
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
-      console.warn('No CSRF token provided for signup');
+
       // In production, we would reject the request
       if (process.env.NODE_ENV === 'production') {
         return createErrorResponse('Security token missing. Please refresh and try again.', 403);

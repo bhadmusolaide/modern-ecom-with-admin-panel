@@ -64,7 +64,7 @@ function CustomersPage() {
 
         // Fetch customers with better error handling
         try {
-          console.log('Customers page: Fetching customers data');
+
           const result = await getCustomers();
 
           if (!result) {
@@ -79,10 +79,7 @@ function CustomersPage() {
             return;
           }
 
-          console.log(`Customers page: Successfully fetched ${result.customers.length} customers`);
-          console.log('Customers page: First customer sample:', result.customers.length > 0 ? JSON.stringify(result.customers[0], null, 2) : 'No customers');
-          console.log('Customers page: All customers:', result.customers.map(c => ({ id: c.id, email: c.email, name: c.name, isActive: c.isActive })));
-          setCustomers(result.customers);
+setCustomers(result.customers);
           setFilteredCustomers(result.customers);
         } catch (customersError) {
           console.error('Customers page: Error fetching customers:', customersError);
@@ -92,9 +89,9 @@ function CustomersPage() {
 
         // Fetch segments with better error handling
         try {
-          console.log('Customers page: Fetching segments data');
+
           const fetchedSegments = await getCustomerSegments();
-          console.log(`Customers page: Successfully fetched ${fetchedSegments.length} segments`);
+
           setSegments(fetchedSegments);
         } catch (segmentsError) {
           console.error('Customers page: Error fetching segments:', segmentsError);

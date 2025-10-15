@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials are missing. Storage functionality may not work correctly.');
+
 }
 
 // Client for browser usage (with anon key)
@@ -27,7 +27,7 @@ if (typeof window === 'undefined') {
       }
     });
   } else {
-    console.warn('Supabase service role key is missing. Admin operations may not work correctly.');
+
   }
 }
 

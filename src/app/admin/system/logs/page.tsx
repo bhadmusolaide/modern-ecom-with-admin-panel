@@ -60,7 +60,6 @@ function LogsPage() {
 
       // Extract unique types for filter
       const types = [...new Set(data.logs.map((log: LogEntry) => log.type))];
-      console.log('Available log types:', types);
 
     } catch (error) {
       console.error('Error fetching logs:', error);

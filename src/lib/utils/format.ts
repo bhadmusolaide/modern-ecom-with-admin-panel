@@ -44,7 +44,7 @@ export const convertToDate = (timestamp: any): Date | null => {
     // Try to parse as ISO string
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      console.warn('Invalid timestamp format:', timestamp);
+
       return null;
     }
 
@@ -79,7 +79,7 @@ export const formatDate = (
     const date = convertToDate(dateString);
 
     if (!date || isNaN(date.getTime())) {
-      console.warn(`Invalid date: ${dateString}`);
+
       return fallbackText;
     }
 

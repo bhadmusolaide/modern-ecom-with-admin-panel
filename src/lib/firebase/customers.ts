@@ -81,7 +81,6 @@ export const getCustomers = async (options: {
   };
 } = {}) => {
   try {
-    console.log('Firebase getCustomers: Starting to fetch customers');
 
     const {
       sortBy = 'createdAt',
@@ -92,10 +91,7 @@ export const getCustomers = async (options: {
       filters = {}
     } = options;
 
-    console.log(`Firebase getCustomers: Using sort ${sortBy} ${sortDirection}, limit ${limitCount}`);
-    console.log('Firebase getCustomers: Applied filters:', JSON.stringify(filters));
-
-    // Start building the query
+// Start building the query
     let customersQuery = query(customersRef);
 
     // Apply filters
@@ -166,21 +162,9 @@ export const getCustomers = async (options: {
       limit(limitCount)
     );
 
-    console.log('Firebase getCustomers: Query built, executing...');
-    console.log('Firebase getCustomers: Query details:', {
-      collection: CUSTOMERS_COLLECTION,
-      filters,
-      sort: {
-        field: sortBy,
-        direction: sortDirection
-      },
-      limit: limitCount
-    });
-
-    // Execute the query
+// Execute the query
     try {
       const snapshot = await getDocs(customersQuery);
-      console.log(`Firebase getCustomers: Query executed, got ${snapshot.docs.length} documents`);
 
       // Convert the documents to User objects
       const customers = snapshot.docs.map(doc => {
@@ -203,8 +187,6 @@ export const getCustomers = async (options: {
           };
         }
       });
-
-      console.log(`Firebase getCustomers: Successfully converted ${customers.length} customers`);
 
       // Return the customers and the last document for pagination
       return {
@@ -266,7 +248,6 @@ export const searchCustomers = async (
  */
 export const checkCustomerIdExists = async (id: string): Promise<boolean> => {
   try {
-    console.log(`Firebase checkCustomerIdExists: Checking if customer ID exists: ${id}`);
 
     if (!id) {
       console.error('Firebase checkCustomerIdExists: Invalid customer ID provided');
@@ -278,7 +259,7 @@ export const checkCustomerIdExists = async (id: string): Promise<boolean> => {
     const customerDoc = await getDoc(customerRef);
 
     if (customerDoc.exists()) {
-      console.log(`Firebase checkCustomerIdExists: Customer ID ${id} exists in customers collection`);
+
       return true;
     }
 
@@ -292,7 +273,6 @@ export const checkCustomerIdExists = async (id: string): Promise<boolean> => {
     const querySnapshot = await getDocs(customerQuery);
     const exists = !querySnapshot.empty;
 
-    console.log(`Firebase checkCustomerIdExists: Customer ID ${id} ${exists ? 'exists' : 'does not exist'} in customers collection (via query)`);
     return exists;
   } catch (error) {
     console.error(`Firebase checkCustomerIdExists: Error checking if customer ID ${id} exists:`, error);
@@ -307,7 +287,6 @@ export const checkCustomerIdExists = async (id: string): Promise<boolean> => {
  */
 export const getCustomerById = async (id: string) => {
   try {
-    console.log(`Firebase getCustomerById: Fetching customer with ID: ${id}`);
 
     if (!id) {
       console.error('Firebase getCustomerById: Invalid customer ID provided:', id);
@@ -323,10 +302,8 @@ export const getCustomerById = async (id: string) => {
 
     // Use client SDK
     const customerRef = doc(db, CUSTOMERS_COLLECTION, id);
-    console.log(`Firebase getCustomerById: Created reference to document: ${CUSTOMERS_COLLECTION}/${id}`);
 
     const customerDoc = await getDoc(customerRef);
-    console.log(`Firebase getCustomerById: Document fetch completed, exists: ${customerDoc.exists()}`);
 
     if (!customerDoc.exists()) {
       console.error(`Firebase getCustomerById: Customer with ID ${id} not found in Firestore`);
@@ -334,11 +311,9 @@ export const getCustomerById = async (id: string) => {
     }
 
     const data = customerDoc.data();
-    console.log(`Firebase getCustomerById: Raw customer data:`, data);
 
     // Convert the customer data
     const customer = convertToCustomer(customerDoc.id, data);
-    console.log(`Firebase getCustomerById: Successfully converted customer data for ${id}`);
 
     return customer;
   } catch (error) {
@@ -394,7 +369,7 @@ export const updateCustomer = async (
           if (user && user.uid === userId) {
             await updateEmail(user, data.email);
           } else {
-            console.warn('Cannot update email for another user in Firebase Auth');
+
           }
 
           // Always update the email in Firestore
@@ -599,11 +574,9 @@ export const calculateCustomerLifetimeValue = async (customerId: string) => {
  */
 export const getCustomerSegments = async () => {
   try {
-    console.log('Firebase getCustomerSegments: Starting to fetch segments');
 
     try {
       const snapshot = await getDocs(segmentsRef);
-      console.log(`Firebase getCustomerSegments: Query executed, got ${snapshot.docs.length} documents`);
 
       // Convert the documents to CustomerSegment objects
       const segments = snapshot.docs.map(doc => {
@@ -627,8 +600,6 @@ export const getCustomerSegments = async () => {
           } as CustomerSegment;
         }
       });
-
-      console.log(`Firebase getCustomerSegments: Successfully converted ${segments.length} segments`);
 
       return segments;
     } catch (queryError) {
@@ -940,7 +911,7 @@ export const findCustomersMatchingSegmentCriteria = async (
     // This is a simplified implementation
     if (criteria.purchasedProducts?.length || criteria.purchasedCategories?.length) {
       // This would require additional queries to the orders collection
-      console.warn('Filtering by purchased products/categories requires additional implementation');
+
     }
 
     return customers;

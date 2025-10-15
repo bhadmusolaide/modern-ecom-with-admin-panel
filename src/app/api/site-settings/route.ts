@@ -4,7 +4,6 @@ import { SiteSettings } from '@/types/site-settings';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
 // Handle OPTIONS requests for CORS
 export async function OPTIONS() {
   return createApiResponse({}, 200);
@@ -13,33 +12,29 @@ export async function OPTIONS() {
 // GET /api/site-settings
 export async function GET() {
   try {
-    console.log('GET /api/site-settings: Fetching site settings');
+
     const settings = await getSiteSettings();
 
     if (!settings) {
-      console.log('GET /api/site-settings: No settings found, creating defaults');
+
       const defaultSettings = await createDefaultSiteSettings();
 
       // Log the response we're about to send
-      console.log('GET /api/site-settings: Returning default settings with keys:', Object.keys(defaultSettings));
 
       // Create the response
       const response = createApiResponse(defaultSettings);
 
       // Log the response status
-      console.log('GET /api/site-settings: Response status:', response.status);
 
       return response;
     }
 
     // Log the response we're about to send
-    console.log('GET /api/site-settings: Returning settings with keys:', Object.keys(settings));
 
     // Create the response
     const response = createApiResponse(settings);
 
     // Log the response status
-    console.log('GET /api/site-settings: Response status:', response.status);
 
     return response;
   } catch (error) {
@@ -72,8 +67,6 @@ export async function PUT(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Processing site settings update from user:', access.userId);
 
     // Get incoming data
     const body = await request.json();

@@ -29,13 +29,13 @@ const PermissionMatrix: React.FC = () => {
   useEffect(() => {
     const fetchCsrfToken = async () => {
       try {
-        console.log('PermissionMatrix: Fetching CSRF token...');
+
         const response = await fetch('/api/auth/csrf');
         if (!response.ok) {
           throw new Error(`Failed to fetch CSRF token: ${response.status}`);
         }
         const data = await response.json();
-        console.log('PermissionMatrix: CSRF token fetched successfully');
+
         setCsrfToken(data.csrfToken);
       } catch (error) {
         console.error('Error fetching CSRF token:', error);
@@ -49,17 +49,16 @@ const PermissionMatrix: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('PermissionMatrix: Fetching roles and permissions...');
+
         setIsLoading(true);
 
         // Fetch roles
-        console.log('PermissionMatrix: Fetching roles...');
+
         const rolesData = await safeFetch('/api/admin/roles');
-        console.log('PermissionMatrix: Roles fetched successfully:', rolesData.roles?.length || 0, 'roles');
 
         // Use default roles if API fails
         if (!rolesData.roles || !Array.isArray(rolesData.roles)) {
-          console.warn('PermissionMatrix: Invalid roles data, using defaults');
+
           // Import predefined roles
           const { PREDEFINED_ROLES } = await import('@/lib/rbac/types');
           setRoles(PREDEFINED_ROLES);
@@ -82,10 +81,9 @@ const PermissionMatrix: React.FC = () => {
         }
 
         // Fetch permissions
-        console.log('PermissionMatrix: Fetching permissions...');
+
         try {
           const permissionsData = await safeFetch('/api/admin/permissions');
-          console.log('PermissionMatrix: Permissions fetched successfully:', permissionsData.permissions?.length || 0, 'permissions');
 
           setPermissions(permissionsData.permissions);
 
@@ -104,7 +102,7 @@ const PermissionMatrix: React.FC = () => {
 
           // Import default permissions
           const { ALL_PERMISSIONS } = await import('@/lib/rbac/permissions');
-          console.log('PermissionMatrix: Using default permissions');
+
           setPermissions(ALL_PERMISSIONS);
 
           // Group default permissions by category

@@ -18,6 +18,7 @@ import {
   Play 
 } from 'lucide-react';
 import { Activity, ActivityType, ActivityAction } from '@/lib/context/ActivityContext';
+import { formatDate } from '@/lib/utils/format';
 
 interface ActivityItemProps {
   activity: Activity;
@@ -40,7 +41,7 @@ export default function ActivityItem({ activity, compact = false }: ActivityItem
     } else if (diffDays < 7) {
       return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
     } else {
-      return date.toLocaleDateString();
+      return formatDate(date, { year: 'numeric', month: 'short', day: 'numeric' });
     }
   };
 

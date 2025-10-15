@@ -173,7 +173,7 @@ export async function getFeaturedProducts(limitCount = 8, useCache = true) {
   if (useCache &&
       featuredProductsCache.data &&
       now - featuredProductsCache.timestamp < featuredProductsCache.expiryTime) {
-    console.log('Using cached featured products');
+
     return featuredProductsCache.data;
   }
 
@@ -208,7 +208,7 @@ export async function getFeaturedProducts(limitCount = 8, useCache = true) {
 
     // If we have cached data, return it even if it's expired
     if (featuredProductsCache.data) {
-      console.warn('Using expired cache due to fetch error');
+
       return featuredProductsCache.data;
     }
 
@@ -302,7 +302,7 @@ export async function getCategoriesWithProductCounts(useCache = true) {
   if (useCache &&
       categoriesWithCountsCache.data &&
       now - categoriesWithCountsCache.timestamp < categoriesWithCountsCache.expiryTime) {
-    console.log('Using cached categories with counts');
+
     return categoriesWithCountsCache.data;
   }
 
@@ -375,7 +375,7 @@ export async function getCategoriesWithProductCounts(useCache = true) {
 
     // If we have cached data, return it even if it's expired
     if (categoriesWithCountsCache.data) {
-      console.warn('Using expired cache due to fetch error');
+
       return categoriesWithCountsCache.data;
     }
 
@@ -397,7 +397,7 @@ export async function getProductCountByCategory(categoryId: string, useCache = t
   if (useCache &&
       productCountsByCategoryCache.data[categoryId] !== undefined &&
       now - productCountsByCategoryCache.timestamp < productCountsByCategoryCache.expiryTime) {
-    console.log(`Using cached product count for category ${categoryId}`);
+
     return productCountsByCategoryCache.data[categoryId];
   }
 
@@ -438,7 +438,7 @@ export async function getAllProductCountsByCategory(useCache = true) {
   if (useCache &&
       Object.keys(productCountsByCategoryCache.data).length > 0 &&
       now - productCountsByCategoryCache.timestamp < productCountsByCategoryCache.expiryTime) {
-    console.log('Using cached product counts for all categories');
+
     return { ...productCountsByCategoryCache.data };
   }
 
@@ -483,11 +483,11 @@ export async function getAllProductCountsByCategory(useCache = true) {
  */
 export async function getProductById(productId: string) {
   try {
-    console.log(`Attempting to fetch product with ID ${productId}`);
+
     const productDoc = await getDoc(doc(db, 'products', productId));
 
     if (!productDoc.exists()) {
-      console.log(`Product with ID ${productId} not found`);
+
       return null;
     }
 
@@ -644,7 +644,7 @@ export async function getRecentOrders(limitCount = 5, useCache = true) {
   if (useCache &&
       recentOrdersCache.data &&
       now - recentOrdersCache.timestamp < recentOrdersCache.expiryTime) {
-    console.log('Using cached recent orders');
+
     return recentOrdersCache.data;
   }
 
@@ -664,7 +664,7 @@ export async function getRecentOrders(limitCount = 5, useCache = true) {
 
     // If we have cached data, return it even if it's expired
     if (recentOrdersCache.data) {
-      console.warn('Using expired cache due to fetch error');
+
       return recentOrdersCache.data;
     }
 
@@ -734,7 +734,7 @@ export async function getOrderCountsByStatus(useCache = true) {
   if (useCache &&
       orderCountsByStatusCache.data &&
       now - orderCountsByStatusCache.timestamp < orderCountsByStatusCache.expiryTime) {
-    console.log('Using cached order counts by status');
+
     return orderCountsByStatusCache.data;
   }
 
@@ -776,7 +776,7 @@ export async function getOrderCountsByStatus(useCache = true) {
 
     // If we have cached data, return it even if it's expired
     if (orderCountsByStatusCache.data) {
-      console.warn('Using expired cache due to fetch error');
+
       return orderCountsByStatusCache.data;
     }
 

@@ -16,14 +16,14 @@ export async function middleware(request: NextRequest) {
     clearTimeout(timeout);
 
     if (!verifyResponse.ok) {
-      console.warn('Session verification failed:', verifyResponse.statusText);
+
       return NextResponse.next();
     }
 
     const session = await verifyResponse.json();
 
     if (!session || !session.user) {
-      console.warn('No valid session found');
+
       return NextResponse.next();
     }
 
@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
     clearTimeout(timeout);
 
     if (error.name === 'AbortError') {
-      console.warn('Session verification timed out or network error - allowing request to proceed');
+
       return NextResponse.next();
     }
 

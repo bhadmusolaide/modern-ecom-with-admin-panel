@@ -192,7 +192,7 @@ export default function CheckoutPage() {
       };
 
       // Create the order in the database
-      console.log('Sending order data to API:', JSON.stringify(orderData, null, 2));
+
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
@@ -203,7 +203,6 @@ export default function CheckoutPage() {
       });
 
       const responseText = await response.text();
-      console.log('API response text:', responseText);
 
       if (!response.ok) {
         try {
@@ -218,7 +217,7 @@ export default function CheckoutPage() {
       let newOrder;
       try {
         newOrder = JSON.parse(responseText);
-        console.log('Order created successfully:', newOrder);
+
       } catch (parseError) {
         console.error('Error parsing success response:', parseError);
         throw new Error('Failed to parse order response');
@@ -231,12 +230,12 @@ export default function CheckoutPage() {
       clearCart();
 
       // Store the order ID in localStorage as a fallback
-      console.log('Storing order data in localStorage:', newOrder.id);
+
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('lastOrderId', newOrder.id);
           localStorage.setItem('lastOrderData', JSON.stringify(newOrder));
-          console.log('Order data successfully stored in localStorage');
+
         } catch (storageError) {
           console.error('Error storing order data in localStorage:', storageError);
         }
@@ -480,8 +479,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-
-              {/* Inventory Warnings */}
+{/* Inventory Warnings */}
               {(inventoryIssues.invalidItems.length > 0 || inventoryIssues.backorderedItems.length > 0) && (
                 <div className="mb-8">
                   <h3 className="text-lg font-medium mb-4">Inventory Status</h3>

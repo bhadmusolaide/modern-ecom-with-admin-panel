@@ -18,9 +18,7 @@ export async function POST(request: NextRequest) {
     // Clear any other auth-related cookies
     cookieStore.delete('firebase-token');
     cookieStore.delete('user-session');
-    
-    console.log('User logged out, session cookies cleared');
-    
+
     return createApiResponse({ success: true });
   } catch (error) {
     console.error('Error during logout:', error);

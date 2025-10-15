@@ -4,14 +4,6 @@ import { DEFAULT_HOMEPAGE_SECTIONS } from '@/lib/data/siteSettings';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
-
-
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
   return createApiResponse({  }, 200);
@@ -40,8 +32,6 @@ export async function GET(request: NextRequest) {
 
       userId = authResult.userId;
     }
-
-    console.log('Resetting homepage sections for user:', userId);
 
     // Get the site settings from Firestore
     const settingsRef = db.collection('siteSettings').doc('default');

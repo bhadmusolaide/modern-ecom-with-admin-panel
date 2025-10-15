@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Customer Creation Retry Utility
  *
  * This utility provides retry mechanisms for customer creation operations
@@ -30,7 +30,7 @@ export class CustomerCreationRetryHandler {
 
     for (let attempt = 1; attempt <= opts.maxAttempts!; attempt++) {
       try {
-        console.log(`Customer creation attempt ${attempt}/${opts.maxAttempts}`);
+
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
@@ -42,7 +42,7 @@ export class CustomerCreationRetryHandler {
 
         // Wait before retrying with exponential backoff
         const delay = opts.delayMs! * Math.pow(opts.backoffMultiplier!, attempt - 1);
-        console.log(`Waiting ${delay}ms before retry...`);
+
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -55,14 +55,12 @@ export class CustomerCreationRetryHandler {
    */
   static async scheduleCustomerCreationForLater(orderId: string, reason: string) {
     try {
-      console.warn(`Scheduling customer creation for later: Order ${orderId}, Reason: ${reason}`);
 
       // Import here to avoid circular dependencies
       const { db } = await import('../config');
       const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
 
       if (!db) {
-        console.warn('Firebase client DB not initialized; skipping scheduling background job.');
         return;
       }
 
@@ -81,7 +79,6 @@ export class CustomerCreationRetryHandler {
         priority: 'normal'
       });
 
-      console.log(`Successfully scheduled customer creation job for order ${orderId}`);
     } catch (error) {
       console.error('Failed to schedule customer creation job:', error);
       // Don't throw - we don't want to break the order creation process
@@ -109,7 +106,6 @@ export class CustomerCreationRetryHandler {
     };
 
     try {
-      console.log(`🔄 Processing pending customer creation jobs (limit: ${limit}, dryRun: ${dryRun})`);
 
       // Use Admin SDK to avoid client config dependency
       const { getAdminFirestore } = await import('../admin');
@@ -126,7 +122,7 @@ export class CustomerCreationRetryHandler {
           .limit(limit)
           .get();
       } catch (indexError) {
-        console.warn('⚠️ Background jobs index not found, using fallback query (slower)');
+
         snapshot = await adminDb
           .collection('background_jobs')
           .where('status', '==', 'pending')
@@ -135,10 +131,8 @@ export class CustomerCreationRetryHandler {
           .get();
       }
 
-      console.log(`📋 Found ${snapshot.docs.length} pending customer creation jobs`);
-
       if (snapshot.docs.length === 0) {
-        console.log('✅ No pending customer creation jobs found');
+
         return result;
       }
 
@@ -149,10 +143,8 @@ export class CustomerCreationRetryHandler {
         const jobId = jobDoc.id;
         const orderId = jobData.orderId;
 
-        console.log(`🔍 Processing job ${jobId} for order ${orderId} (attempt ${jobData.retryCount || 0} of ${jobData.maxRetries || 5})`);
-
         if (dryRun) {
-          console.log(`🧪 DRY RUN: Would process customer creation for order ${orderId}`);
+
           result.successful++;
           continue;
         }
@@ -164,8 +156,6 @@ export class CustomerCreationRetryHandler {
             updatedAt: new Date()
           });
 
-          console.log(`🚀 Attempting to create customer for order ${orderId}`);
-
           // Use admin-based creator
           await CustomerCreationRetryHandler.retryCustomerCreation(
             () => createCustomerForSpecificOrder(orderId),
@@ -175,12 +165,11 @@ export class CustomerCreationRetryHandler {
           // Mark job as completed and delete it
           await adminDb.collection('background_jobs').doc(jobId).delete();
 
-          console.log(`✅ Successfully processed customer creation for order ${orderId}`);
           result.successful++;
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          console.error(`❌ Failed to process customer creation for order ${orderId}:`, errorMessage);
+          console.error(`âŒ Failed to process customer creation for order ${orderId}:`, errorMessage);
 
           // Update job with error and increment retry count
           const newRetryCount = (jobData.retryCount || 0) + 1;
@@ -193,7 +182,7 @@ export class CustomerCreationRetryHandler {
               retryCount: newRetryCount,
               updatedAt: new Date()
             });
-            console.error(`💀 Job ${jobId} for order ${orderId} failed permanently after ${newRetryCount} attempts`);
+            console.error(`ðŸ’€ Job ${jobId} for order ${orderId} failed permanently after ${newRetryCount} attempts`);
             result.failed++;
             result.errors.push({ jobId, orderId, error: errorMessage });
           } else {
@@ -205,21 +194,19 @@ export class CustomerCreationRetryHandler {
               nextRetryAt: new Date(Date.now() + nextRetryDelay),
               updatedAt: new Date()
             });
-            console.log(`⏳ Job ${jobId} scheduled for retry ${newRetryCount} in ${nextRetryDelay}ms`);
+
           }
         }
       }
 
-      console.log(`📊 Completed processing background jobs: ${result.processed} processed, ${result.successful} successful, ${result.failed} failed`);
-
       if (result.errors.length > 0) {
-        console.error(`💥 ${result.errors.length} jobs failed permanently:`, result.errors);
+        console.error(`ðŸ’¥ ${result.errors.length} jobs failed permanently:`, result.errors);
       }
 
       return result;
 
     } catch (error) {
-      console.error('💥 Error processing pending customer creation jobs:', error);
+      console.error('ðŸ’¥ Error processing pending customer creation jobs:', error);
       throw error;
     }
   }

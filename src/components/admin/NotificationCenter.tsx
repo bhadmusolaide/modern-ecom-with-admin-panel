@@ -178,8 +178,7 @@ export default function NotificationCenter({ className = '' }: NotificationCente
       }
     };
 
-
-    let unsubscribe: (() => void) | undefined;
+let unsubscribe: (() => void) | undefined;
     setupOrderListener().then((unsub) => {
       if (typeof unsub === 'function') {
         unsubscribe = unsub;

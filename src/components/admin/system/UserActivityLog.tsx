@@ -55,7 +55,7 @@ const UserActivityLog: React.FC = () => {
     setIsLoading(true);
     try {
       if (!activities || !Array.isArray(activities)) {
-        console.warn('UserActivityLog: No activities available');
+
         setUniqueUsers([]);
         setFilteredActivities([]);
         return;

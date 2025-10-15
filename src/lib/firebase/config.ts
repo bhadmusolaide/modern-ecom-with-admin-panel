@@ -38,16 +38,11 @@ if (hasClientConfig) {
 
   // Log minimal Firebase initialization status
   if (process.env.NODE_ENV === 'development') {
-    console.log('Firebase client initialized:', {
-      appInitialized: !!app,
-      authInitialized: !!auth,
-      dbInitialized: !!db,
-      projectId: firebaseConfig.projectId
-    });
+
   }
 } else {
   if (process.env.NODE_ENV === 'development') {
-    console.warn('Firebase client not initialized: missing NEXT_PUBLIC_* config');
+
   }
 }
 

@@ -39,11 +39,8 @@ export async function GET(
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Admin access granted for user:', access.userId);
-
     // Get customer ID
     const customerId = params.id;
-    console.log('Fetching orders for customer ID:', customerId);
 
     try {
       // First check if the customer exists
@@ -69,31 +66,18 @@ export async function GET(
       }
 
       try {
-        // Log the customer data for debugging
-        console.log('Customer data for query building:', {
-          customerId,
-          userId: userId || 'not available',
-          customerData: customerData ? 'exists' : 'missing'
-        });
-
         // Always try to query by customerId first (most reliable)
-        console.log(`Querying orders by customerId: ${customerId}`);
         ordersQuery = db.collection('orders').where('customerId', '==', customerId);
 
         // Add ordering after the where clause
         ordersQuery = ordersQuery.orderBy('createdAt', 'desc');
-
-        console.log('Query built successfully');
       } catch (queryBuildError) {
-        console.error('Error building Firestore query:', queryBuildError);
         return createErrorResponse('Failed to build database query', 500);
       }
 
       // Execute the query with better error handling
       try {
-        console.log('Executing Firestore query for orders');
         const ordersSnapshot = await ordersQuery.get();
-        console.log(`Query executed successfully, got ${ordersSnapshot.size} documents`);
 
         // Convert the documents to Order objects with safer date handling
         const orders = ordersSnapshot.docs.map(doc => {
@@ -106,7 +90,6 @@ export async function GET(
               updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
             };
           } catch (dateError) {
-            console.error(`Error processing dates for order ${doc.id}:`, dateError);
             return {
               id: doc.id,
               ...data,
@@ -116,8 +99,6 @@ export async function GET(
           }
         });
 
-        console.log(`Found ${orders.length} orders for customer ${customerId}`);
-
         return createApiResponse({
           orders,
           message: 'Customer orders retrieved successfully'
@@ -125,10 +106,8 @@ export async function GET(
       } catch (queryError) {
         // Fallback: handle missing composite index by removing orderBy and sorting in memory
         const message = queryError instanceof Error ? queryError.message : String(queryError);
-        console.warn('Primary orders query failed, attempting fallback without orderBy. Reason:', message);
         if (/FAILED_PRECONDITION|index/i.test(message)) {
           try {
-            console.warn('Missing Firestore composite index for (customerId, createdAt). Using fallback query and in-memory sort.');
             const fallbackSnap = await db.collection('orders')
               .where('customerId', '==', customerId)
               .get();
@@ -151,15 +130,11 @@ export async function GET(
               };
             });
 
-            console.log(`Fallback succeeded, found ${orders.length} orders for customer ${customerId}`);
-            console.warn('Recommendation: add Firestore composite index for orders on fields: customerId (ASC), createdAt (DESC).');
-
             return createApiResponse({
               orders,
               message: 'Customer orders retrieved successfully (fallback)'
             });
           } catch (fallbackError) {
-            console.error('Fallback query failed:', fallbackError);
             throw new Error(`Error executing Firestore query (and fallback): ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
           }
         }

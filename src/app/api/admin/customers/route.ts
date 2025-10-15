@@ -40,19 +40,10 @@ const createCustomerSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('Customers API: Processing GET request');
-    console.log('Customers API: Request headers:', Object.fromEntries(request.headers.entries()));
-    console.log('Customers API: Request URL:', request.url);
 
-    // Unified auth check
-    console.log('Customers API: Checking authentication...');
+// Unified auth check
+
     const access = await checkAccess(request);
-    console.log('Customers API: Auth check result:', {
-      authenticated: access.authenticated,
-      isAdmin: access.isAdmin,
-      userId: access.userId,
-      error: access.error
-    });
 
     if (!access.authenticated) {
       console.error('Customers API: Authentication failed');
@@ -67,22 +58,12 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Customers API: Admin access granted for user:', access.userId);
-
     try {
       // Get all customers from the customers collection
-      console.log('Customers API: Fetching customers from database');
-      console.log('Customers API: Database instance:', !!db);
-      console.log('Customers API: Collection path: customers');
 
-      try {
-        console.log('Customers API: Executing customers collection query...');
+try {
+
         const customersSnapshot = await db.collection('customers').get();
-        console.log('Customers API: Query executed, raw snapshot:', {
-          empty: customersSnapshot.empty,
-          size: customersSnapshot.size,
-          docsCount: customersSnapshot.docs.length
-        });
 
         const customers = customersSnapshot.docs.map(doc => {
           const data = doc.data();
@@ -105,21 +86,10 @@ export async function GET(request: NextRequest) {
             updatedAt: data.updatedAt ? data.updatedAt.toDate() : null
           };
 
-          console.log('Customers API: Processed customer:', {
-            id: customer.id,
-            email: customer.email,
-            name: customer.name,
-            isActive: customer.isActive,
-            totalOrders: customer.totalOrders
-          });
-
           return customer;
         });
 
-        console.log(`Customers API: Successfully retrieved ${customers.length} customers`);
-        console.log('Customers API: First customer sample:', customers.length > 0 ? JSON.stringify(customers[0], null, 2) : 'No customers');
-
-        return createApiResponse({
+return createApiResponse({
           customers,
           message: 'Customers retrieved successfully'
         });
@@ -186,8 +156,6 @@ export async function POST(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Parse request body
     const body = await request.json();

@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
   return createApiResponse({}, 200);
@@ -64,10 +63,8 @@ export async function PUT(request: NextRequest) {
 
     // Get incoming data
     const headerData = await request.json();
-    console.log('Updating header settings from user:', userId);
-    console.log('headerData:', headerData);
 
-    // Validate data
+// Validate data
     if (
       typeof headerData.transparent !== 'boolean' ||
       !Array.isArray(headerData.menuItems)
@@ -79,7 +76,7 @@ export async function PUT(request: NextRequest) {
     const settingsDoc = await settingsRef.get();
 
     if (!settingsDoc.exists) {
-      console.warn('Settings doc not found. Creating default.');
+
       await settingsRef.set({
         header: headerData,
         createdAt: new Date(),

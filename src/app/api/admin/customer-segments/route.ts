@@ -16,7 +16,6 @@ import { db } from '@/lib/firebase/admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('Customer Segments API: Processing GET request');
 
     // Unified auth check
     const access = await checkAccess(request);
@@ -34,11 +33,8 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Customer Segments API: Admin access granted for user:', access.userId);
-
     try {
       // Get customer segments
-      console.log('Customer Segments API: Fetching segments from database');
 
       // Use admin SDK directly
       const segmentsRef = db.collection('customer-segments');
@@ -74,8 +70,6 @@ export async function GET(request: NextRequest) {
           message: 'No segments found'
         });
       }
-
-      console.log(`Customer Segments API: Successfully retrieved ${segments.length} segments`);
 
       return createApiResponse({
         segments,

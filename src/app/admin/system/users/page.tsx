@@ -61,9 +61,9 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
   useEffect(() => {
     const fetchCsrfToken = async () => {
       try {
-        console.log('Fetching CSRF token...');
+
         const data = await safeFetch('/api/auth/csrf');
-        console.log('CSRF token fetched successfully');
+
         setCsrfToken(data.csrfToken);
       } catch (error) {
         console.error('Error fetching CSRF token:', error);
@@ -79,11 +79,11 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
   // Fetch users
   const fetchUsers = useCallback(async () => {
     try {
-      console.log('Fetching users...');
+
       setIsLoadingUsers(true);
 
       const data = await safeFetch('/api/admin/users');
-      console.log('Users fetched successfully:', data.users?.length || 0, 'users');
+
       setUsers(data.users || []);
       setFilteredUsers(data.users || []);
     } catch (error) {
@@ -96,7 +96,7 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
 
   useEffect(() => {
     if (!isLoading) {
-      console.log('Auth loaded, fetching users');
+
       fetchUsers();
     }
   }, [isLoading, fetchUsers]);
@@ -197,7 +197,6 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
 
       // Sign in with the custom token using FirebaseAuthProvider
       const firebaseUser = await signInWithCustomToken(data.customToken);
-      console.log('Successfully signed in as user:', firebaseUser.uid);
 
       // Store admin session in localStorage
       localStorage.setItem('adminSession', JSON.stringify({
@@ -352,11 +351,11 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
 
   // Debug information
   useEffect(() => {
-    console.log('Auth state:', { isLoading, user: user ? 'authenticated' : 'not authenticated' });
+
   }, [isLoading, user]);
 
   if (isLoading) {
-    console.log('Rendering loading state...');
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center h-64">

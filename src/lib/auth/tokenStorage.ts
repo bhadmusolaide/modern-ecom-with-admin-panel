@@ -91,11 +91,7 @@ export async function storeAuthToken(token: string): Promise<void> {
   try {
     // Validate token format before proceeding
     if (!isValidJWTFormat(token)) {
-      console.warn('Invalid token format provided to storeAuthToken:', {
-        tokenLength: token?.length,
-        tokenPrefix: token?.substring(0, 20) + '...',
-        isValidJWT: isValidJWTFormat(token)
-      });
+
       return;
     }
 
@@ -124,13 +120,12 @@ export async function storeAuthToken(token: string): Promise<void> {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.warn(`Failed to store auth token in secure cookie (${response.status}): ${errorText}`);
-        console.warn('This is expected if the token is invalid or expired');
-      } else {
-        console.log('Auth token stored securely in HttpOnly cookie');
+
+} else {
+
       }
     } catch (apiError) {
-      console.warn('API error when storing token in cookie, falling back to localStorage:', apiError);
+
     }
   } catch (error) {
     console.error('Error storing auth token:', error);
@@ -166,7 +161,7 @@ export function getAuthToken(): string | null {
       return token;
     }
   } catch (error) {
-    console.warn('Error reading token from localStorage:', error);
+
   }
 
   return null;
@@ -190,7 +185,7 @@ export async function removeAuthToken(): Promise<void> {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
   } catch (error) {
-    console.warn('Error removing token from localStorage:', error);
+
   }
 
   // Clear HttpOnly cookie via API
@@ -202,7 +197,6 @@ export async function removeAuthToken(): Promise<void> {
       },
     });
 
-    console.log('Auth token removed from secure cookie');
   } catch (error) {
     console.error('Error removing auth token from cookie:', error);
   }

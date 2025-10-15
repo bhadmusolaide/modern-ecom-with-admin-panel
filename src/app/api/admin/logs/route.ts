@@ -27,8 +27,6 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Admin access granted for user:', access.userId);
-
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');

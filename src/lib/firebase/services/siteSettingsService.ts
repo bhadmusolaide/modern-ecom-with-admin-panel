@@ -110,7 +110,6 @@ const convertToSiteSettings = (id: string, data: any): SiteSettings => {
 // Get site settings
 export async function getSiteSettings(): Promise<SiteSettings | null> {
   try {
-    console.log('getSiteSettings: Attempting to fetch settings from Firestore');
 
     // Check if db is initialized
     if (!db || typeof db.collection !== 'function') {
@@ -120,22 +119,18 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
 
     const settingsDoc = await db.collection('siteSettings').doc('default').get();
 
-    console.log('getSiteSettings: Document exists?', settingsDoc.exists);
-
     if (!settingsDoc.exists) {
-      console.log('getSiteSettings: No settings document found');
+
       return null;
     }
 
     // Get the data and log it
     const data = settingsDoc.data();
-    console.log('getSiteSettings: Raw data keys:', Object.keys(data || {}));
 
     // Create the settings object
     const settings = { id: settingsDoc.id, ...data } as SiteSettings;
 
     // Log the final settings object
-    console.log('getSiteSettings: Returning settings with keys:', Object.keys(settings));
 
     return settings;
   } catch (error) {

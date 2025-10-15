@@ -4,7 +4,6 @@ import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 import { ALL_PERMISSIONS } from '@/lib/rbac/permissions';
 
-
 // Get all permissions
 export async function GET(request: NextRequest) {
   try {
@@ -21,8 +20,6 @@ export async function GET(request: NextRequest) {
   if (!access.isAdmin) {
     return createErrorResponse('Forbidden. Admin access required.', 403);
   }
-
-  console.log('Admin access granted for user:', access.userId);
 
     // Return permissions
     return createApiResponse({ 

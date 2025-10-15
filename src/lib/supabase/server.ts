@@ -8,7 +8,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.warn('Supabase admin credentials are missing. Server-side operations may not work correctly.');
+
 }
 
 // Create the admin client with service role key
@@ -51,8 +51,7 @@ export async function ensureBucketExists(bucketName: string, isPublic: boolean =
       console.error(`Failed to create bucket '${bucketName}':`, createError);
       return false;
     }
-    
-    console.log(`Created bucket '${bucketName}' successfully`);
+
     return true;
   } catch (error) {
     console.error('Error ensuring bucket exists:', error);

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 import { createOrder, getOrders } from '@/lib/firebase/orders';
+import { processOrderInventory } from '@/lib/firebase/inventory';
 import { Order, OrderStatus, PaymentStatus } from '@/lib/types';
 
 // No mock orders - we'll always use real data from the database
@@ -28,11 +29,8 @@ export async function POST(request: NextRequest) {
     // This allows guest users to create orders
     // We'll track if it's a guest order in the order data
 
-    console.log('Order creation request from user:', access.authenticated ? access.userId : 'guest');
-
     // Parse request body
     const orderData = await request.json();
-    console.log('Received order data:', JSON.stringify(orderData, null, 2));
 
     // Validate required fields
     if (!orderData.items || !orderData.items.length) {
@@ -63,27 +61,36 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    console.log('Debug: access.userId:', access.userId);
-    console.log('Debug: orderData.userId:', orderData.userId);
-    console.log('Debug: orderToCreate.userId:', orderToCreate.userId);
-    console.log('Debug: orderToCreate.isGuestOrder:', orderToCreate.isGuestOrder);
+    console.log(orderToCreate);
 
     // Create the order
-    console.log('Creating order with data:', JSON.stringify(orderToCreate, null, 2));
-    console.log('Saving order to Firestore collection "orders"...');
     let newOrder;
     try {
       newOrder = await createOrder(orderToCreate);
-      console.log('Order created successfully with ID:', newOrder.id);
-      console.log('Order data:', JSON.stringify(newOrder, null, 2));
     } catch (createError) {
-      console.error('Error in createOrder function:', createError);
       throw createError;
+    }
+
+    // Process inventory changes for the order
+    try {
+      const inventoryProcessed = await processOrderInventory(
+        newOrder.items,
+        newOrder.userId || 'guest-user',
+        newOrder.id
+      );
+      
+      if (!inventoryProcessed) {
+        console.warn(`Inventory processing failed for order ${newOrder.id}`);
+        // Note: We don't fail the response if inventory processing fails
+        // as the order has already been created and potentially paid for
+      }
+    } catch (inventoryError) {
+      console.error(`Error processing inventory for order ${newOrder.id}:`, inventoryError);
+      // Continue without blocking the response
     }
 
     return createApiResponse(newOrder, 201);
   } catch (error) {
-    console.error('Error creating order:', error);
     return createErrorResponse('Failed to create order', 500, { details: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
@@ -94,30 +101,10 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('Orders API: Processing GET request');
-    console.log('Orders API: Request URL:', request.url);
-    console.log('Orders API: Request method:', request.method);
-
-    // Extract auth token for debugging
-    const authHeader = request.headers.get('authorization');
-    console.log('Orders API: Auth header present:', !!authHeader);
-
-    if (authHeader) {
-      const token = authHeader.split('Bearer ')[1];
-      console.log('Orders API: Token length:', token?.length || 0);
-      console.log('Orders API: Token prefix:', token?.substring(0, 10) + '...');
-    } else {
-      console.warn('Orders API: No authorization header found in request');
-    }
-
     // Unified auth check - always required, even in development mode
-    console.log('Orders API: Starting authentication check');
     const access = await checkAccess(request);
-    console.log('Orders API: Authentication check completed:', access);
 
     if (!access.authenticated) {
-      console.error('Orders API: Authentication failed');
-      console.error('Orders API: Access result:', access);
       return createErrorResponse(
         access.error || 'Authentication required',
         access.status || 401
@@ -127,8 +114,6 @@ export async function GET(request: NextRequest) {
     // Get user ID and admin status from auth check
     const userId = access.userId;
     const isAdmin = access.isAdmin || false;
-
-    console.log(`Orders API: User ${userId} (isAdmin: ${isAdmin}) requesting orders`);
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -159,7 +144,6 @@ export async function GET(request: NextRequest) {
         }
       }
     } catch (parseError) {
-      console.error('Orders API: Error parsing pagination parameters:', parseError);
       // Continue with default values
     }
 
@@ -167,19 +151,17 @@ export async function GET(request: NextRequest) {
     const filters: any = {};
 
     // Get user email from auth data or request
-    const userEmail = access.email || searchParams.get('userEmail');
-    console.log('Orders API: User email from auth:', userEmail);
+    const userEmail = searchParams.get('userEmail');
 
     // If not admin, retrieve both user's orders and guest orders with matching email
     if (!access.isAdmin) {
       // For regular users, we'll use a special combined query approach
       // This is handled in the query logic below
       filters.userId = userId;
-      
+
       // Also store email for combined query
       if (userEmail) {
         filters.email = userEmail;
-        console.log('Orders API: Will also check for guest orders with email:', userEmail);
       }
     } else {
       // Admin can filter by various criteria
@@ -200,11 +182,10 @@ export async function GET(request: NextRequest) {
         try {
           filters.dateFrom = new Date(dateFrom);
           if (isNaN(filters.dateFrom.getTime())) {
-            console.error('Orders API: Invalid dateFrom parameter:', dateFrom);
             delete filters.dateFrom;
           }
         } catch (dateError) {
-          console.error('Orders API: Error parsing dateFrom:', dateError);
+          // Invalid date, skip
         }
       }
 
@@ -212,36 +193,25 @@ export async function GET(request: NextRequest) {
         try {
           filters.dateTo = new Date(dateTo);
           if (isNaN(filters.dateTo.getTime())) {
-            console.error('Orders API: Invalid dateTo parameter:', dateTo);
             delete filters.dateTo;
           }
         } catch (dateError) {
-          console.error('Orders API: Error parsing dateTo:', dateError);
+          // Invalid date, skip
         }
       }
+
+      // Ensure proper sorting for admin users - newest orders first
+      filters.sortBy = 'createdAt';
+      filters.sortDirection = 'desc';
     }
 
     // Get orders with filters
-    console.log('Orders API: Fetching orders with filters:', JSON.stringify(filters, null, 2));
-    console.log('Orders API: Pagination:', { page, pageSize });
-    console.log('Orders API: User ID from auth:', userId);
-    console.log('Orders API: User email from auth:', userEmail);
-
     let result;
     try {
       // Always use real database in both development and production
-      console.log('Orders API: Fetching orders from database');
-
-      // Add more detailed logging
-      console.log('Orders API: Using filters:', JSON.stringify(filters, null, 2));
-      console.log('Orders API: Page size:', pageSize);
-
       try {
         // For non-admin users, always try to get both authenticated user orders and guest orders with matching email
         if (!access.isAdmin) {
-          console.log('Orders API: Getting orders for authenticated user');
-          console.log('Orders API: User ID:', filters.userId);
-          console.log('Orders API: User email:', filters.email);
 
           // First, get orders by userId (authenticated user orders)
           const userOrdersResult = await getOrders(
@@ -250,27 +220,17 @@ export async function GET(request: NextRequest) {
             true // Use admin DB
           );
 
-          console.log('Orders API: Found user orders:', userOrdersResult.orders.length);
-          if (userOrdersResult.orders.length > 0) {
-            console.log('Orders API: First user order ID:', userOrdersResult.orders[0].id);
-            console.log('Orders API: First user order userId:', userOrdersResult.orders[0].userId);
-          }
-
           let combinedOrders = [...userOrdersResult.orders];
           const orderIds = new Set(combinedOrders.map(order => order.id));
-          
+
           // If we have user email, also get guest orders with that email
           if (filters.email) {
-            console.log('Orders API: Also checking for guest orders with email:', filters.email);
-            
             // Then, get guest orders by email
             const guestOrdersResult = await getOrders(
               { email: filters.email, sortBy: 'createdAt', sortDirection: 'desc' },
               { pageSize: 100 }, // Get more to ensure we have enough after combining
               true // Use admin DB
             );
-            
-            console.log('Orders API: Found guest orders:', guestOrdersResult.orders.length);
 
             // Add guest orders that aren't already in the results
             guestOrdersResult.orders.forEach(order => {
@@ -283,20 +243,11 @@ export async function GET(request: NextRequest) {
 
           // Sort combined orders by creation date (newest first)
           combinedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          
-          console.log('Orders API: Total combined orders:', combinedOrders.length);
 
           // Apply pagination to combined results
           const startIndex = (page - 1) * pageSize;
           const endIndex = startIndex + pageSize;
           const paginatedOrders = combinedOrders.slice(startIndex, endIndex);
-          
-          console.log('Orders API: Returning paginated orders:', paginatedOrders.length);
-
-          // For debugging, log some order details
-          if (paginatedOrders.length > 0) {
-            console.log('Orders API: First order details:', JSON.stringify(paginatedOrders[0], null, 2));
-          }
 
           result = {
             orders: paginatedOrders,
@@ -305,17 +256,14 @@ export async function GET(request: NextRequest) {
             currentPage: page,
             pageSize: pageSize
           };
-
-          console.log(`Orders API: Combined results - ${userOrdersResult.orders.length} user orders + guest orders = ${combinedOrders.length} total`);
         } else {
           // Standard query for admin users
-          console.log('Orders API: Admin user - using standard query with filters');
           result = await getOrders(
             filters,
             { pageSize },
             true // Use admin DB
           );
-          
+
           // Format result for consistency
           result = {
             orders: result.orders || [],
@@ -325,13 +273,7 @@ export async function GET(request: NextRequest) {
             pageSize: pageSize
           };
         }
-
-        console.log('Orders API: getOrders returned successfully');
       } catch (orderError) {
-        console.error('Orders API: Error in getOrders function call:', orderError);
-        console.error('Orders API: Error details:', orderError instanceof Error ? orderError.message : 'Unknown error');
-        console.error('Orders API: Error stack:', orderError instanceof Error ? orderError.stack : 'No stack trace available');
-
         // Return empty result instead of throwing
         result = {
           orders: [],
@@ -345,7 +287,6 @@ export async function GET(request: NextRequest) {
       }
 
       if (!result) {
-        console.error('Orders API: getOrders returned null or undefined');
         // Create an empty result instead of throwing
         result = {
           orders: [],
@@ -359,21 +300,7 @@ export async function GET(request: NextRequest) {
       }
 
       if (!result.orders) {
-        console.error('Orders API: getOrders returned no orders array');
         result.orders = [];
-      }
-
-      // Log the result for debugging
-      console.log('Orders API: Query result:', {
-        orderCount: result.orders.length,
-        filters,
-        pagination: result.pagination || { page, pageSize }
-      });
-
-      if (result.orders.length > 0) {
-        console.log('Orders API: First order sample ID:', result.orders[0].id);
-      } else {
-        console.log('Orders API: No orders found in the database');
       }
 
       // Ensure we have valid pagination data
@@ -388,7 +315,6 @@ export async function GET(request: NextRequest) {
         pageSize: result.pageSize || pageSize
       });
     } catch (fetchError) {
-      console.error('Orders API: Error in getOrders function:', fetchError);
       return createErrorResponse(
         'Database error while fetching orders',
         500,
@@ -396,7 +322,6 @@ export async function GET(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error('Orders API: Unhandled error:', error);
     return createErrorResponse(
       'Failed to get orders',
       500,

@@ -34,7 +34,7 @@ function LoginContent() {
       setRedirecting(true);
 
       // Use Firebase Authentication directly
-      console.log('Logging in with Firebase, redirectTo:', redirectTo);
+
       await login(email, password);
 
       // Set auth-status cookie directly in the browser for compatibility
@@ -45,7 +45,7 @@ function LoginContent() {
 
       // Redirect after a short delay
       setTimeout(() => {
-        console.log('Redirecting to:', redirectTo);
+
         router.push(redirectTo);
       }, 1000);
     } catch (err) {

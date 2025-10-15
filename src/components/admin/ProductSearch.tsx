@@ -13,7 +13,6 @@ import Image from 'next/image';
 import { debounce } from 'lodash';
 import { formatPrice } from '@/lib/utils';
 
-
 interface ProductSearchProps {
   onSelectProduct?: (product: Product) => void;
   isModal?: boolean;

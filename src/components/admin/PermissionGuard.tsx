@@ -30,14 +30,13 @@ export default function PermissionGuard(props: PermissionGuardProps) {
 
     // Admin users always have access
     if (isAdmin) {
-      console.log('Admin user detected, granting access');
+
       setHasAccess(true);
       setCheckComplete(true);
       return;
     }
 
     // No bypass auth - both development and production use Firebase authentication directly
-    console.log('Using Firebase authentication for permission check');
 
     // Check if user has required permissions
     if (isAuthenticated) {

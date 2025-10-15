@@ -15,7 +15,7 @@ try {
   require('events').EventEmitter.defaultMaxListeners = 30;
   
   // Log the initialization
-  console.log('Server initialization complete');
+
 } catch (error) {
   console.error('Error during server initialization:', error);
 }

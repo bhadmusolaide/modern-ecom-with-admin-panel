@@ -6,11 +6,6 @@ import { PREDEFINED_ROLES } from '@/lib/rbac/types';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
 // Validation schema for role creation
 const createRoleSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -35,8 +30,6 @@ export async function GET(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Get roles from Firestore
     const rolesSnapshot = await db.collection('roles').get();

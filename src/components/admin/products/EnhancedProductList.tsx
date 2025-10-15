@@ -5,6 +5,7 @@ import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Product } from '@/lib/types';
 import { formatPrice } from '@/lib/utils';
+import { formatDate } from '@/lib/utils/format';
 import { FiGrid, FiList, FiColumns, FiZap, FiSmartphone, FiPackage, FiTag, FiStar, FiEdit2, FiCopy, FiTrash2 } from 'react-icons/fi';
 import { useToast } from '@/lib/context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -926,9 +927,9 @@ export default function EnhancedProductList({
                           <td key={`${product.id}-${column.id}`} className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
                               {product.updatedAt ? (
-                                new Date(product.updatedAt).toLocaleDateString()
+                                formatDate(product.updatedAt, { year: 'numeric', month: 'short', day: 'numeric' })
                               ) : product.createdAt ? (
-                                new Date(product.createdAt).toLocaleDateString()
+                                formatDate(product.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })
                               ) : (
                                 'Unknown'
                               )}

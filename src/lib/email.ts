@@ -11,13 +11,8 @@ export interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   // In development, we'll just log the email
   if (process.env.NODE_ENV !== 'production') {
-    console.log('========== EMAIL SENT ==========');
-    console.log(`To: ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Text: ${options.text}`);
-    console.log(`HTML: ${options.html}`);
-    console.log('===============================');
-    return true;
+
+return true;
   }
 
   try {

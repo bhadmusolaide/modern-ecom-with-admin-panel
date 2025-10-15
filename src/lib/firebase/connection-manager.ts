@@ -23,7 +23,7 @@ export function getDbConnection() {
   
   // Log connection count periodically
   if (activeConnections % 10 === 0) {
-    console.log(`Active Firebase connections: ${activeConnections}`);
+
   }
   
   return db;
@@ -64,13 +64,13 @@ if (typeof window === 'undefined') { // Only run on server
     
     // Log connection status if there are active connections or every 5 minutes
     if (activeConnections > 0 || idleTime > 300000) {
-      console.log(`Firebase connection status: ${activeConnections} active connections, idle for ${Math.round(idleTime / 1000)}s`);
+
     }
     
     // If system has been idle for a while, reset the connection count
     // This helps recover from potential leaks
     if (idleTime > IDLE_TIMEOUT && activeConnections > 0) {
-      console.log(`Resetting connection count after ${Math.round(idleTime / 1000)}s of inactivity`);
+
       activeConnections = 0;
     }
   }, 60000); // Check every minute

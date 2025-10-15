@@ -42,7 +42,7 @@ export async function retryWithBackoff<T>(
     try {
       // If this is not the first attempt, log the retry
       if (attempt > 0) {
-        console.log(`Retry attempt ${attempt} of ${retryConfig.maxRetries}...`);
+
       }
       
       // Try to execute the function

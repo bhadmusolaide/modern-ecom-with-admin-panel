@@ -176,11 +176,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
     const isProductChanged = JSON.stringify(product) !== JSON.stringify(prevProductRef.current);
 
     if (isProductChanged) {
-      console.log('Product changed, initializing form data', {
-        product,
-        prevProduct: prevProductRef.current,
-        currentImageUrls: imageUrlsRef.current
-      });
 
       prevProductRef.current = product ? { ...product } : null;
 
@@ -190,7 +185,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
         // Check if we already have images in the state
         const hasExistingImages = imageUrlsRef.current.length > 0;
-        console.log('Has existing images:', hasExistingImages);
 
         // Only process and set images if we don't already have images in the state
         // This prevents overwriting newly uploaded images when the component re-renders
@@ -201,11 +195,11 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           if (product.images && Array.isArray(product.images) && product.images.length > 0) {
             // Filter out any invalid URLs
             validImages = product.images.filter(url => url && typeof url === 'string' && url.trim() !== '');
-            console.log('Setting imageUrls from product.images:', validImages);
+
           } else if (product.image && typeof product.image === 'string' && product.image.trim() !== '') {
             // Otherwise fall back to single image if it's valid
             validImages = [product.image];
-            console.log('Setting imageUrls from product.image:', validImages);
+
           }
 
           // Ensure the product copy has consistent image data
@@ -222,15 +216,8 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           // Then update the state variables
           setImageUrls([...validImages]);
 
-          console.log('Initialized product with images:', {
-            mainImage: productCopy.image,
-            imagesArray: productCopy.images,
-            imageUrlsState: validImages,
-            imageUrlsRef: imageUrlsRef.current
-          });
         } else {
           // If we already have images, keep them and update the product copy
-          console.log('Keeping existing images:', imageUrlsRef.current);
 
           // Update the product copy with the current images
           productCopy.images = [...imageUrlsRef.current];
@@ -293,7 +280,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
         // Reset validation errors
         setValidationErrors({});
 
-        console.log('Initialized empty product form');
       }
 
       // Reset form submission state
@@ -303,12 +289,8 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
   // Add a monitoring effect for imageUrls changes
   useEffect(() => {
-    console.log('imageUrls state changed:', imageUrls);
-    console.log('formData.image:', formData.image);
-    console.log('formData.images:', formData.images);
-    console.log('imageUrlsRef.current:', imageUrlsRef.current);
 
-    // Keep the ref in sync with the state
+// Keep the ref in sync with the state
     imageUrlsRef.current = [...imageUrls];
 
     // Check for inconsistencies between imageUrls and formData
@@ -320,7 +302,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
     // If we need to update formData, do it
     if (needsImageUpdate || needsImagesUpdate) {
-      console.log('Synchronizing formData from imageUrls due to:', { needsImageUpdate, needsImagesUpdate });
 
       setFormData(prev => {
         const updatedData = {
@@ -328,14 +309,14 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           image: needsImageUpdate ? imageUrls[0] : prev.image,
           images: needsImagesUpdate ? [...imageUrls] : prev.images
         };
-        console.log('Updated formData with synchronized images:', updatedData);
+
         return updatedData;
       });
 
       // Clear any image validation errors
       setValidationErrors(prev => {
         if (prev.image) {
-          console.log('Clearing image validation error due to imageUrls update');
+
           return {
             ...prev,
             image: ''
@@ -409,12 +390,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
             // This ensures we don't overwrite any newly uploaded images
             updatedData.images = prev.images || [];
             updatedData.image = prev.image || '';
-
-            console.log('Updated form data with categories while preserving images:', {
-              categories: updatedData.categories,
-              images: updatedData.images,
-              image: updatedData.image
-            });
 
             return updatedData;
           });
@@ -643,10 +618,9 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
   };
 
   const handleMultipleImagesUpload = (urls: string[]) => {
-    console.log('handleMultipleImagesUpload called with URLs:', urls);
 
     if (!urls || !urls.length) {
-      console.warn('handleMultipleImagesUpload received empty or null URLs array');
+
       return;
     }
 
@@ -655,20 +629,17 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
       const validUrls = urls.filter(url => url && typeof url === 'string' && url.trim() !== '');
 
       if (validUrls.length === 0) {
-        console.warn('No valid URLs found in upload response');
+
         return;
       }
 
       // Log for debugging
-      console.log('Multiple upload - New URLs to add:', validUrls);
 
       // IMPORTANT: Use the ref to get the current state
       const currentImageUrls = [...imageUrlsRef.current]; // Create a copy to avoid reference issues
-      console.log('Multiple upload - Current imageUrls from ref:', currentImageUrls);
 
       // Create a new array with all the images
       const updatedImageUrls = [...currentImageUrls, ...validUrls];
-      console.log('Multiple upload - Setting imageUrls to:', updatedImageUrls);
 
       // Update the ref first to ensure it's the source of truth
       imageUrlsRef.current = [...updatedImageUrls]; // Create a new array to avoid reference issues
@@ -688,13 +659,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           image: prev.image && prev.image.trim() !== '' ? prev.image : validUrls[0]
         };
 
-        console.log('Multiple upload - Updated formData:', updatedData);
         return updatedData;
       });
 
       // Clear any validation errors related to images
       setValidationErrors(prev => {
-        console.log('Clearing image validation error (multiple upload)');
+
         return {
           ...prev,
           image: ''
@@ -703,15 +673,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
       // Force a re-validation after a short delay to ensure state is updated
       setTimeout(() => {
-        console.log('Delayed validation check - imageUrls:', imageUrls);
-        console.log('Delayed validation check - imageUrlsRef.current:', imageUrlsRef.current);
-        console.log('Delayed validation check - formData.images:', formData.images);
 
-        // Force update formData again to ensure consistency
+// Force update formData again to ensure consistency
         setFormData(prev => {
           // Check if formData.images is out of sync with imageUrlsRef.current
           if (!prev.images || !Array.isArray(prev.images) || prev.images.length !== imageUrlsRef.current.length) {
-            console.log('Fixing inconsistent formData.images in delayed check');
+
             return {
               ...prev,
               images: [...imageUrlsRef.current], // Use the ref as the source of truth
@@ -733,27 +700,23 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
   const handleSingleImageUpload = (url: string | null,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     metadata?: Record<string, unknown>) => {
-    console.log('ProductForm.handleSingleImageUpload called with URL:', url);
+
     if (!url) {
-      console.warn('ProductForm.handleSingleImageUpload received null/undefined URL');
+
       return;
     }
 
     // Validate the URL
     if (typeof url !== 'string' || url.trim() === '') {
-      console.warn('Invalid image URL received:', url);
+
       return;
     }
 
-    console.log('Single upload - URL:', url);
-
     // IMPORTANT: Use the ref to get the current state
     const currentImageUrls = [...imageUrlsRef.current]; // Create a copy to avoid reference issues
-    console.log('Single upload - Current imageUrls from ref:', currentImageUrls);
 
     // Create a new array with the new image
     const newUrls = [...currentImageUrls, url];
-    console.log('Single upload - Setting imageUrls to:', newUrls);
 
     // Update the ref first to ensure it's always in sync
     imageUrlsRef.current = [...newUrls]; // Create a new array to avoid reference issues
@@ -775,13 +738,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
         images: [...newUrls] // Create a new array to avoid reference issues
       };
 
-      console.log('Single upload - Updated formData:', updatedData);
       return updatedData;
     });
 
     // Clear any validation errors related to images
     setValidationErrors(prev => {
-      console.log('Clearing image validation error');
+
       return {
         ...prev,
         image: ''
@@ -790,15 +752,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
     // Force a re-validation after a short delay to ensure state is updated
     setTimeout(() => {
-      console.log('Delayed validation check - imageUrls:', imageUrls);
-      console.log('Delayed validation check - imageUrlsRef.current:', imageUrlsRef.current);
-      console.log('Delayed validation check - formData.images:', formData.images);
 
-      // Force update formData again to ensure consistency
+// Force update formData again to ensure consistency
       setFormData(prev => {
         // Check if formData.images is out of sync with imageUrlsRef.current
         if (!prev.images || !Array.isArray(prev.images) || prev.images.length !== imageUrlsRef.current.length) {
-          console.log('Fixing inconsistent formData.images in delayed check');
+
           return {
             ...prev,
             images: [...imageUrlsRef.current], // Use the ref as the source of truth
@@ -821,16 +780,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
       const urlToRemove = currentImageUrls[index];
 
       if (!urlToRemove) {
-        console.warn('Attempted to remove image at invalid index:', index);
+
         return;
       }
 
-      console.log('Remove - Image at index', index, 'URL:', urlToRemove);
-      console.log('Remove - Current imageUrls from ref:', currentImageUrls);
-
-      // Create a new array without the removed image
+// Create a new array without the removed image
       const newUrls = currentImageUrls.filter((_, i) => i !== index);
-      console.log('Remove - Setting imageUrls to:', newUrls);
 
       // Update the ref first to ensure it's always in sync
       imageUrlsRef.current = [...newUrls]; // Create a new array to avoid reference issues
@@ -852,7 +807,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           image: newMainImage
         };
 
-        console.log('Remove - Updated formData:', updatedData);
         return updatedData;
       });
 
@@ -866,15 +820,12 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
       // Force a re-validation after a short delay to ensure state is updated
       setTimeout(() => {
-        console.log('Delayed validation check after remove - imageUrls:', imageUrls);
-        console.log('Delayed validation check after remove - imageUrlsRef.current:', imageUrlsRef.current);
-        console.log('Delayed validation check after remove - formData.images:', formData.images);
 
-        // Force update formData again to ensure consistency
+// Force update formData again to ensure consistency
         setFormData(prev => {
           // Check if formData.images is out of sync with imageUrlsRef.current
           if (!prev.images || !Array.isArray(prev.images) || prev.images.length !== imageUrlsRef.current.length) {
-            console.log('Fixing inconsistent formData.images after remove');
+
             return {
               ...prev,
               images: [...imageUrlsRef.current], // Use the ref as the source of truth
@@ -902,7 +853,7 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           const result = await response.json();
 
           if (!result.success) {
-            console.warn('Image deletion warning:', result.error || 'Unknown error');
+
             // Don't show error to user as this is a background operation
           }
         } catch (err) {
@@ -1249,12 +1200,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
     newErrors.description = validateField('description', formData.description);
 
     // Validate image - check all possible sources of image data
-    console.log('Validating images:', {
-      'formData.image': formData.image,
-      'formData.images': formData.images,
-      'imageUrls': imageUrls,
-      'imageUrlsRef.current': imageUrlsRef.current
-    });
 
     // Always use the ref as the source of truth for image URLs
     const currentImageUrls = imageUrlsRef.current;
@@ -1269,25 +1214,18 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
                            currentImageUrls.some(url => url && typeof url === 'string' && url.trim() !== '');
 
     // Log detailed validation results
-    console.log('Image validation details:', {
-      hasMainImage,
-      hasImagesArray,
-      hasImageUrls,
-      hasImageUrlsRef
-    });
 
     if (!hasMainImage && !hasImagesArray && !hasImageUrls && !hasImageUrlsRef) {
       newErrors.image = 'At least one product image is required';
       errorMessages.push('At least one product image is required');
-      console.log('Image validation failed - no images found');
+
     } else {
       // Clear any existing image error if we have images
       newErrors.image = '';
-      console.log('Image validation passed - images found');
 
       // If we have images in the ref but not in formData, update formData
       if (hasImageUrlsRef && (!hasImagesArray || !hasMainImage)) {
-        console.log('Images found in ref but not in formData - will be fixed before submission');
+
       }
     }
 
@@ -1360,11 +1298,9 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
     // Get the latest image URLs from the ref to ensure we have the most up-to-date data
     const currentImageUrls = imageUrlsRef.current;
-    console.log('Form submission - Current image URLs from ref:', currentImageUrls);
 
     // Force synchronize image state before validation
     if (currentImageUrls.length > 0) {
-      console.log('Form submission - Forcing image state synchronization');
 
       // Update the state with the ref values to ensure consistency
       setImageUrls(currentImageUrls);
@@ -1376,7 +1312,7 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
           image: currentImageUrls[0],
           images: [...currentImageUrls]
         };
-        console.log('Form submission - Updated formData with images:', updatedData);
+
         return updatedData;
       });
 
@@ -1420,18 +1356,10 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
       const latestImageUrls = [...imageUrlsRef.current];
 
       // Log the current state before submission
-      console.log('Submit - Current state before submission:', {
-        imageUrls,
-        imageUrlsRef: latestImageUrls,
-        formDataImages: formData.images,
-        formDataImage: formData.image
-      });
 
       // Ensure images are properly set in the form data
       // Filter out any invalid URLs
       const validImageUrls = latestImageUrls.filter(url => url && typeof url === 'string' && url.trim() !== '');
-
-      console.log('Submit - Valid image URLs:', validImageUrls);
 
       // Create a copy of the form data to avoid mutation
       const updatedFormData = {
@@ -1446,11 +1374,9 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
       // Double-check that images are properly set
       if (validImageUrls.length > 0 && (!updatedFormData.images || updatedFormData.images.length === 0)) {
-        console.warn('Images missing from updatedFormData, forcing them to be included');
+
         updatedFormData.images = [...validImageUrls];
       }
-
-      console.log('Submitting product with images:', updatedFormData.images);
 
       // Submit the form data
       await onSubmit(updatedFormData);
@@ -1752,7 +1678,7 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
               {imageUrlsRef.current.map((url, index) => {
                 // Skip rendering if URL is empty or invalid
                 if (!url || typeof url !== 'string' || url.trim() === '') {
-                  console.warn(`Skipping invalid image URL at index ${index}:`, url);
+
                   return null;
                 }
 
@@ -1768,17 +1694,6 @@ export default function ProductForm({ product, onSubmit }: ProductFormProps): Re
 
                 // Check if this is the main image
                 const isMainImage = formData.image === url || index === 0;
-
-                console.log(`Image ${index} validation:`, {
-                  url,
-                  isValidImageUrl,
-                  isBlobUrl,
-                  isFirebaseUrl,
-                  isSupabaseUrl,
-                  isS3Url,
-                  isHttpUrl,
-                  isMainImage
-                });
 
                 return (
                   <div

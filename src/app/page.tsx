@@ -21,9 +21,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (settings) {
-      console.log('Homepage Settings:', settings);
-      console.log('Homepage Sections:', settings?.homepageSections);
-    }
+
+}
     if (error) {
       console.error('Error loading settings:', error);
     }
@@ -40,7 +39,7 @@ export default function HomePage() {
 
   // This function is no longer needed as it requires admin authentication
   const handleResetHomepage = async () => {
-    console.log('Reset homepage functionality requires admin authentication');
+
     refreshSettings();
   };
 

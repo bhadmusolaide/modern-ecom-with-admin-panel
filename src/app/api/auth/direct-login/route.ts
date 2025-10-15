@@ -9,13 +9,6 @@ import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 import { sign } from 'jsonwebtoken';
 
-
-
-
-
-
-
-
 // Validation schema
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -51,34 +44,23 @@ export async function POST(request: NextRequest) {
         userId = 'admin-' + Buffer.from(ADMIN_EMAIL).toString('hex');
         userRole = 'ADMIN';
         userName = 'Admin User';
-        console.log('Using development admin credentials');
+
       } else {
         // In production or for non-admin credentials, use Firebase authentication
-        console.log('Attempting Firebase authentication with:', { email });
-        console.log('Firebase config:', {
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.substring(0, 5) + '...',
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        });
 
-        // Sign in with Firebase Auth
+// Sign in with Firebase Auth
         const userCredential = await signInWithEmailAndPassword(clientAuth, email, password);
         const firebaseUser = userCredential.user;
-
-        console.log('Firebase auth successful, user:', {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          emailVerified: firebaseUser.emailVerified
-        });
 
         // Get user ID from Firebase
         userId = firebaseUser.uid;
 
         // Get additional user data from Firestore
-        console.log('Fetching user data from Firestore for ID:', userId);
+
         const userDoc = await db.collection('users').doc(userId).get();
 
         if (!userDoc.exists) {
-          console.log('User document not found in Firestore, creating basic record');
+
           // Create a basic user record if it doesn't exist
           await db.collection('users').doc(userId).set({
             email: email,
@@ -96,16 +78,11 @@ export async function POST(request: NextRequest) {
         } else {
           // Get user data from Firestore
           const userData = userDoc.data();
-          console.log('User data from Firestore:', {
-            role: userData.role,
-            name: userData.name
-          });
 
           userRole = userData.role || 'CUSTOMER';
           userName = userData.name || firebaseUser.displayName || email.split('@')[0];
         }
 
-        console.log('Firebase authentication successful for user:', userId, 'with role:', userRole);
       }
     } catch (firebaseError) {
       console.error('Firebase authentication error:', firebaseError);
@@ -126,7 +103,7 @@ export async function POST(request: NextRequest) {
         lastLoginAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-      console.log('User last login updated');
+
     } catch (error) {
       console.error('Error updating user last login in Firestore:', error);
       // Continue with login despite Firestore error
@@ -134,7 +111,6 @@ export async function POST(request: NextRequest) {
 
     // Create JWT token
     const expiresIn = rememberMe ? '30d' : '1d';
-    console.log('Creating JWT token for admin user with expiresIn:', expiresIn);
 
     const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production';
     const token = sign(

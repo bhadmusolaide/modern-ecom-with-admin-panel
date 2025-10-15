@@ -43,7 +43,7 @@ export async function processImage(
 ): Promise<ProcessedImage> {
   // Check if we're on the client side
   if (typeof window !== 'undefined') {
-    console.warn('Image processing is not available on the client side');
+
     // Return a mock result for client-side
     return {
       data: buffer,
@@ -206,7 +206,7 @@ export async function generateImageVariants(buffer: Buffer): Promise<{
 }> {
   // Check if we're on the client side
   if (typeof window !== 'undefined') {
-    console.warn('Image variant generation is not available on the client side');
+
     // Return mock results for client-side
     const mockImage: ProcessedImage = {
       data: buffer,
@@ -279,7 +279,7 @@ export async function generateImageVariants(buffer: Buffer): Promise<{
       quality: 70,
     });
   } catch (error) {
-    console.warn('AVIF conversion not supported:', error);
+
     // Continue without AVIF
   }
 

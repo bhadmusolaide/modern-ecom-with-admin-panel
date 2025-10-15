@@ -20,11 +20,10 @@ if (typeof window === 'undefined') {
       
       // Log if memory usage is high or every 5 minutes
       if (rssInMB > 500 || Math.random() < 0.01) { // ~1% chance to log (approx every 5 mins with 3s interval)
-        console.log(`Memory usage - RSS: ${rssInMB} MB, Heap Total: ${heapTotalInMB} MB, Heap Used: ${heapUsedInMB} MB`);
-        
+
         // If memory usage is very high, force garbage collection if possible
         if (rssInMB > 1000 && global.gc) {
-          console.log('Memory usage is high, forcing garbage collection');
+
           global.gc();
         }
       }
@@ -40,7 +39,7 @@ if (typeof window === 'undefined') {
   
   // Handle SIGTERM gracefully
   process.on('SIGTERM', () => {
-    console.log('SIGTERM received, cleaning up...');
+
     clearInterval(memoryMonitor);
     process.exit(0);
   });

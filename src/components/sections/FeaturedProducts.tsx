@@ -64,9 +64,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ sectionData }) => {
     visible: { opacity: 1, y: 0 },
   };
 
-
-
-  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
+const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     setAddingProductId(product.id);
 

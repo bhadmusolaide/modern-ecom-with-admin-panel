@@ -20,14 +20,9 @@ import { recalculateAllCustomerLifetimeValues } from '@/lib/firebase/services/cu
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🚀 ========== FIX CUSTOMERS API CALLED ==========');
-    console.log('Fix Customers API: Processing request');
-    console.log('Request URL:', request.url);
-    console.log('Request method:', request.method);
 
-    // Skip auth check for this utility endpoint - it's meant for one-time fixes
+// Skip auth check for this utility endpoint - it's meant for one-time fixes
     // In production, you might want to add authentication here
-    console.log('Fix Customers API: Processing request (no auth required for this utility)');
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -35,20 +30,18 @@ export async function GET(request: NextRequest) {
     const dryRun = searchParams.get('dryRun') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    console.log(`Fix Customers API: Action: ${action}, Dry run: ${dryRun}, Limit: ${limit}`);
-
     let result;
 
     if (action === 'process-jobs') {
       // Process pending background jobs
-      console.log('🔧 Fix Customers API: Processing background jobs');
+
       result = await CustomerCreationRetryHandler.processPendingCustomerCreationJobs({
         limit,
         dryRun
       });
     } else if (action === 'recalculate-totals') {
       // Recalculate customer lifetime values
-      console.log('🔧 Fix Customers API: Recalculating customer lifetime values');
+
       if (dryRun) {
         result = { message: 'Dry run: would recalculate all customer totals' };
       } else {
@@ -56,17 +49,14 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // Fix orders without customers (default action)
-      console.log('🔧 Fix Customers API: Processing orders without customers');
+
       result = await createCustomersForOrdersWithoutCustomers({
         limit,
         dryRun
       });
     }
 
-    console.log('✅ Fix Customers API: Processing completed successfully:', result);
-    console.log('🚀 ========== FIX CUSTOMERS API COMPLETED ==========');
-
-    return createApiResponse({
+return createApiResponse({
       success: true,
       action,
       dryRun,

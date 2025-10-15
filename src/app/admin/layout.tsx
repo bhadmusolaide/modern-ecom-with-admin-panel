@@ -21,21 +21,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     // Use Firebase Auth directly
     if (!authLoading) {
-      console.log('Firebase auth loaded, checking status...');
-      console.log('User authenticated:', isAuthenticated);
-      console.log('User is admin:', isAdmin);
 
-      if (isAuthenticated) {
+if (isAuthenticated) {
         if (isAdmin) {
-          console.log('User is authenticated and is admin');
+
           setIsPageLoading(false);
         } else {
-          console.log('User is authenticated but not admin, redirecting to home');
+
           router.push('/');
         }
       } else {
         // No bypass auth - both development and production use Firebase authentication directly
-        console.log('User is not authenticated, redirecting to login');
+
         router.push('/auth/login?from=/admin');
       }
     }

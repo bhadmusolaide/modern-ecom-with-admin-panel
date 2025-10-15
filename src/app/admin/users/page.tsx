@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
 import { useToast } from '@/lib/context/ToastContext';
 import { withAdminPage } from '@/lib/auth/withAdminPage';
+import { formatDate } from '@/lib/utils/format';
 
 interface UserData {
   id: string;
@@ -241,16 +242,7 @@ function AdminUsersPage() {
     return filteredUsers.slice(startIndex, endIndex);
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDate function is now imported from '@/lib/utils/format'
 
   if (isLoading || !isAdmin) {
     return (
@@ -429,10 +421,22 @@ function AdminUsersPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(user.createdAt)}
+                          {formatDate(user.createdAt, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(user.lastLoginAt)}
+                          {formatDate(user.lastLoginAt, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">

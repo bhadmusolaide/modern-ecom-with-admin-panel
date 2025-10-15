@@ -39,8 +39,6 @@ import {
  * Test creating a new order
  */
 async function testCreateOrder() {
-  console.log('Testing createOrder...');
-  
   try {
     // Create a sample order
     const shippingAddress: ShippingAddress = {
@@ -91,8 +89,6 @@ async function testCreateOrder() {
       isGuestOrder: true,
       requiresShipping: true
     });
-    
-    console.log('Order created successfully:', newOrder);
     return newOrder;
   } catch (error) {
     console.error('Error creating order:', error);
@@ -104,11 +100,8 @@ async function testCreateOrder() {
  * Test getting an order by ID
  */
 async function testGetOrderById(orderId: string) {
-  console.log(`Testing getOrderById with ID ${orderId}...`);
-  
   try {
     const order = await getOrderById(orderId);
-    console.log('Order retrieved successfully:', order);
     return order;
   } catch (error) {
     console.error('Error getting order by ID:', error);
@@ -120,11 +113,8 @@ async function testGetOrderById(orderId: string) {
  * Test getting an order by order number
  */
 async function testGetOrderByOrderNumber(orderNumber: string) {
-  console.log(`Testing getOrderByOrderNumber with number ${orderNumber}...`);
-  
   try {
     const order = await getOrderByOrderNumber(orderNumber);
-    console.log('Order retrieved successfully:', order);
     return order;
   } catch (error) {
     console.error('Error getting order by order number:', error);
@@ -136,8 +126,6 @@ async function testGetOrderByOrderNumber(orderNumber: string) {
  * Test updating an order
  */
 async function testUpdateOrder(orderId: string) {
-  console.log(`Testing updateOrder with ID ${orderId}...`);
-  
   try {
     const updatedOrder = await updateOrder(orderId, {
       status: OrderStatus.PROCESSING,
@@ -152,8 +140,6 @@ async function testUpdateOrder(orderId: string) {
         phone: '555-987-6543'
       }
     });
-    
-    console.log('Order updated successfully:', updatedOrder);
     return updatedOrder;
   } catch (error) {
     console.error('Error updating order:', error);
@@ -165,8 +151,6 @@ async function testUpdateOrder(orderId: string) {
  * Test updating order status
  */
 async function testUpdateOrderStatus(orderId: string) {
-  console.log(`Testing updateOrderStatus with ID ${orderId}...`);
-  
   try {
     const updatedOrder = await updateOrderStatus(
       orderId,
@@ -177,8 +161,6 @@ async function testUpdateOrderStatus(orderId: string) {
         isCustomerVisible: true
       }
     );
-    
-    console.log('Order status updated successfully:', updatedOrder);
     return updatedOrder;
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -190,8 +172,6 @@ async function testUpdateOrderStatus(orderId: string) {
  * Test adding a note to an order
  */
 async function testAddOrderNote(orderId: string) {
-  console.log(`Testing addOrderNote with ID ${orderId}...`);
-  
   try {
     const updatedOrder = await addOrderNote(
       orderId,
@@ -201,8 +181,6 @@ async function testAddOrderNote(orderId: string) {
         isCustomerVisible: false
       }
     );
-    
-    console.log('Order note added successfully:', updatedOrder);
     return updatedOrder;
   } catch (error) {
     console.error('Error adding order note:', error);
@@ -214,15 +192,11 @@ async function testAddOrderNote(orderId: string) {
  * Test getting orders with filters
  */
 async function testGetOrders() {
-  console.log('Testing getOrders...');
-  
   try {
     const result = await getOrders(
       { status: OrderStatus.PROCESSING },
       { pageSize: 10 }
     );
-    
-    console.log('Orders retrieved successfully:', result);
     return result;
   } catch (error) {
     console.error('Error getting orders:', error);
@@ -234,11 +208,8 @@ async function testGetOrders() {
  * Test getting orders by user
  */
 async function testGetOrdersByUser(userId: string) {
-  console.log(`Testing getOrdersByUser with user ID ${userId}...`);
-  
   try {
     const result = await getOrdersByUser(userId);
-    console.log('User orders retrieved successfully:', result);
     return result;
   } catch (error) {
     console.error('Error getting orders by user:', error);
@@ -250,11 +221,8 @@ async function testGetOrdersByUser(userId: string) {
  * Test getting recent orders
  */
 async function testGetRecentOrders() {
-  console.log('Testing getRecentOrders...');
-  
   try {
     const orders = await getRecentOrders(5);
-    console.log('Recent orders retrieved successfully:', orders);
     return orders;
   } catch (error) {
     console.error('Error getting recent orders:', error);
@@ -266,11 +234,8 @@ async function testGetRecentOrders() {
  * Test deleting an order
  */
 async function testDeleteOrder(orderId: string) {
-  console.log(`Testing deleteOrder with ID ${orderId}...`);
-  
   try {
     const result = await deleteOrder(orderId);
-    console.log('Order deleted successfully:', result);
     return result;
   } catch (error) {
     console.error('Error deleting order:', error);
@@ -313,8 +278,6 @@ export async function runOrderTests() {
     
     // Delete the order (cleanup)
     await testDeleteOrder(newOrder.id);
-    
-    console.log('All order tests completed successfully!');
   } catch (error) {
     console.error('Error running order tests:', error);
   }

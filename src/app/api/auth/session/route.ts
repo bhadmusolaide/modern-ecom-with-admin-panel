@@ -56,7 +56,6 @@ export async function POST(request: NextRequest) {
       });
 
       // Log session creation
-      console.log(`Session created for user: ${access.userId}`);
 
       // Update last login time in Firestore
       try {
@@ -72,11 +71,11 @@ export async function POST(request: NextRequest) {
               lastLoginAt: new Date(),
               lastSessionAt: new Date()
             });
-            console.log(`Updated login time for user: ${access.userId}`);
+
           } else {
             // Log the issue but don't create a document
             // Users should be created through proper registration flow
-            console.warn(`User document not found for ID: ${access.userId}. Cannot update login time.`);
+
           }
         }
       } catch (dbError) {

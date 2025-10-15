@@ -42,7 +42,7 @@ export const getStripe = () => {
 export const createPaymentIntent = async (order: Order): Promise<{ clientSecret: string; paymentIntentId: string }> => {
   // Temporarily bypass Stripe for development
   if (process.env.NEXT_PUBLIC_BYPASS_PAYMENT === 'true') {
-    console.warn('Bypassing Stripe payment intent creation for development.');
+
     return {
       clientSecret: 'dummy_client_secret_' + order.id,
       paymentIntentId: 'dummy_payment_intent_id_' + order.id,

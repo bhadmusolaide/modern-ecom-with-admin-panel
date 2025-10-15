@@ -5,12 +5,6 @@ import { auth as adminAuth } from '@/lib/firebase/admin';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
 // This is a one-time setup route to create an admin user in Firebase
 // It should be disabled or removed after use for security reasons
 
@@ -22,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // First try to authenticate with the setup key
     if (adminSetupKey === validSetupKey) {
-      console.log('Admin setup authorized with valid setup key');
+
     } else {
       // If no valid setup key, use the unified auth check
       const access = await checkAccess(request);
@@ -38,7 +32,6 @@ export async function POST(request: NextRequest) {
         return createErrorResponse('Forbidden. Only admins can create admin users.', 403);
       }
 
-      console.log('Admin access granted for user:', access.userId);
     }
 
     // Parse request body
@@ -65,7 +58,7 @@ export async function POST(request: NextRequest) {
        });
     } catch (error) {
       // User doesn't exist, continue with creation
-      console.log('User does not exist, creating new admin user');
+
     }
 
     // Create user with Firebase Auth

@@ -75,8 +75,6 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(imageUrl);
         }
 
-        console.log(`Successfully cached external image to Supabase: ${urlData.publicUrl}`);
-
         // Redirect to the Supabase URL
         return NextResponse.redirect(urlData.publicUrl);
       } catch (error) {

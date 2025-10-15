@@ -101,8 +101,7 @@ async function updateOrderStatus(orderId: string, status: OrderStatus) {
   try {
     // This is a placeholder for the actual implementation
     // In a real application, you would update the order status in your database
-    console.log(`Updating order ${orderId} status to ${status}`);
-    
+
     // Example implementation:
     // await db.collection('orders').doc(orderId).update({ status });
   } catch (error) {

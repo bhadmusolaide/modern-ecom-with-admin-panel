@@ -234,7 +234,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     try {
       // In development mode, return a dummy token
       if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: returning dummy token');
+
         return 'dev-token';
       }
 
@@ -244,10 +244,9 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         const currentUser = auth.currentUser;
 
         if (currentUser) {
-          console.log('Firebase user found, getting fresh token');
+
           // Force token refresh to ensure it's valid
           const token = await currentUser.getIdToken(true);
-          console.log('Successfully retrieved fresh token from Firebase');
 
           // Store the token in a cookie for future use
           document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Strict`;
@@ -257,7 +256,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
           return token;
         } else {
-          console.log('No Firebase user found - user not logged in');
+
         }
       } catch (authError) {
         console.error('Error getting token from Firebase Auth:', authError);
@@ -265,7 +264,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
       // Second priority: Check for token in window object (might be set by other components)
       if (window.__FIREBASE_TOKEN__) {
-        console.log('Found token in window object');
+
         return window.__FIREBASE_TOKEN__;
       }
 
@@ -276,18 +275,17 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         ?.split('=')[1];
 
       if (authToken) {
-        console.log('Found auth token in cookies');
+
         return authToken;
       }
 
-      console.log('No authentication token found. Please log in as an admin user.');
       return null;
     } catch (error) {
       console.error('Error getting Firebase token:', error);
 
       // In development mode, return a dummy token even if there's an error
       if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: returning dummy token after error');
+
         return 'dev-token';
       }
 
@@ -326,7 +324,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       } catch (fetchError) {
         // Ignore AbortError - it's expected when component unmounts or refresh is called
         if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          console.log('Settings fetch was cancelled');
+
           return;
         }
 
@@ -336,10 +334,10 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         try {
           const cachedSettings = localStorage.getItem('siteSettings');
           if (cachedSettings) {
-            console.log('Fetch failed. Using cached settings from localStorage');
+
             setSettings(JSON.parse(cachedSettings));
           } else {
-            console.log('Fetch failed. No cached settings found, using defaults');
+
             setSettings(defaultSettings);
           }
         } catch (localStorageError) {
@@ -385,10 +383,10 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         try {
           const cachedSettings = localStorage.getItem('siteSettings');
           if (cachedSettings) {
-            console.log('Using cached settings from localStorage');
+
             data = JSON.parse(cachedSettings);
           } else {
-            console.log('No cached settings found, using defaults');
+
             data = defaultSettings;
           }
         } catch (localStorageError) {
@@ -489,7 +487,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
 
       // Use default settings as fallback
-      console.log('Using default settings as fallback');
+
       setSettings(defaultSettings);
     } finally {
       // Always clear the timeout to prevent memory leaks and unexpected aborts
@@ -530,8 +528,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         console.error('No authentication token available. Cannot update settings.');
         throw new Error('Authentication required. Please log in as an admin to update settings.');
       }
-
-      console.log('Authentication token available:', !!authToken);
 
       // Update the settings in the database
       const response = await fetch('/api/site-settings', {
@@ -619,7 +615,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log('Updating section:', { sectionId, sectionData });
 
       // Validate section ID
       const sectionExists = settings.homepageSections.some(section => section.id === sectionId);
@@ -648,13 +643,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       setSettings(optimisticSettings);
 
       // Log cookies and headers for debugging
-      console.log('Cookies before section update:', document.cookie);
 
       // Get Firebase auth token
       const authToken = await getFirebaseToken();
 
       // Send update to API with credentials
-      console.log(`Sending API request to update section ${sectionId}:`, sectionData);
+
       const response = await fetch(`/api/site-settings/section/${sectionId}`, {
         method: 'PUT',
         headers: {
@@ -669,8 +663,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
         credentials: 'include', // Use include to ensure cookies are sent in cross-origin requests
         cache: 'no-store' // Ensure we don't use cached responses
       });
-
-      console.log('Section update response status:', response.status);
 
       // Handle error responses
       if (!response.ok) {
@@ -694,7 +686,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       let updatedSettings;
       try {
         updatedSettings = await response.json();
-        console.log('Section updated successfully, received settings:', updatedSettings);
 
         // Validate the response contains the expected data
         if (!updatedSettings || !updatedSettings.homepageSections) {
@@ -775,10 +766,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      console.log('Starting header update process');
-      console.log('Environment:', process.env.NODE_ENV);
 
-      // Validate and prepare header settings
+// Validate and prepare header settings
       const validatedHeaderSettings = {
         transparent: headerSettings.transparent,
         menuItems: headerSettings.menuItems.map(item => ({
@@ -805,15 +794,12 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Get Firebase auth token
       const authToken = await getFirebaseToken();
 
-      console.log('Updating header with Firebase auth token:', authToken ? 'Present' : 'Missing');
-      console.log('Current URL:', window.location.href);
-
-      // Check if user is authenticated by importing auth
+// Check if user is authenticated by importing auth
       try {
         const { auth } = await import('@/lib/firebase/config');
-        console.log('Current user authenticated:', auth?.currentUser ? 'Yes' : 'No');
+
       } catch (error) {
-        console.log('Error checking authentication status:', error);
+
       }
 
       // Prepare headers with auth token
@@ -824,16 +810,16 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Add Authorization header if token exists or in development mode
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding Authorization header with token');
+
       } else if (process.env.NODE_ENV === 'development') {
         headers['Authorization'] = 'Bearer dev-token';
-        console.log('Adding development Authorization header');
+
       } else {
-        console.warn('No auth token available for API request');
+
       }
 
       // Send to API
-      console.log('Sending header update request with data:', validatedHeaderSettings);
+
       const response = await fetch('/api/site-settings/header', {
         method: 'PUT',
         headers,
@@ -843,7 +829,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       });
 
       // Log response status
-      console.log('Response status:', response.status, response.statusText);
 
       // Check if the response is OK before proceeding
       if (!response.ok) {
@@ -853,7 +838,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
         try {
           const errorData = await response.json();
-          console.log('Error response data:', errorData);
 
           if (errorData.error) {
             errorMessage = errorData.error;
@@ -879,7 +863,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       let responseData;
       try {
         responseData = await response.json();
-        console.log('Header update successful, received data:', Object.keys(responseData));
+
       } catch (parseError) {
         console.error('Error parsing success response:', parseError);
         throw new Error('Error processing server response. The update may have succeeded but the response was invalid.');
@@ -888,7 +872,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Refresh settings to ensure we have the latest data
       try {
         await fetchSettings();
-        console.log('Settings refreshed after header update');
+
       } catch (refreshError) {
         console.error('Error refreshing settings after update:', refreshError);
         // Don't throw here, the update was successful even if refresh failed
@@ -917,7 +901,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      console.log('Starting footer update process');
 
       // Store original settings for rollback in case of error
       const originalSettings = settings ? { ...settings } : null;
@@ -941,16 +924,16 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Add Authorization header if token exists or in development mode
       if (authToken) {
         headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding Authorization header with token');
+
       } else if (process.env.NODE_ENV === 'development') {
         headers['Authorization'] = 'Bearer dev-token';
-        console.log('Adding development Authorization header');
+
       } else {
-        console.warn('No auth token available for API request');
+
       }
 
       // Send to API
-      console.log('Sending footer update request');
+
       const response = await fetch('/api/site-settings/footer', {
         method: 'PUT',
         headers,
@@ -960,7 +943,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       });
 
       // Log response status
-      console.log('Response status:', response.status, response.statusText);
 
       // Check if the response is OK before proceeding
       if (!response.ok) {
@@ -970,7 +952,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
         try {
           const errorData = await response.json();
-          console.log('Error response data:', errorData);
 
           if (errorData.error) {
             errorMessage = errorData.error;
@@ -996,7 +977,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       let responseData;
       try {
         responseData = await response.json();
-        console.log('Footer update successful, received data:', Object.keys(responseData));
+
       } catch (parseError) {
         console.error('Error parsing success response:', parseError);
         throw new Error('Error processing server response. The update may have succeeded but the response was invalid.');
@@ -1005,7 +986,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Refresh settings to ensure we have the latest data
       try {
         await fetchSettings();
-        console.log('Settings refreshed after footer update');
+
       } catch (refreshError) {
         console.error('Error refreshing settings after update:', refreshError);
         // Don't throw here, the update was successful even if refresh failed

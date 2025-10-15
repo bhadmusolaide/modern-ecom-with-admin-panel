@@ -34,7 +34,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setItems(JSON.parse(saved));
       }
     } catch (e) {
-      console.warn("Failed to load wishlist from localStorage", e);
+
     } finally {
       setIsLoading(false);
       isHydrated.current = true;
@@ -47,7 +47,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem("wishlist", JSON.stringify(items));
     } catch (e) {
-      console.warn("Failed to save wishlist to localStorage", e);
+
     }
   }, [items]);
 
@@ -67,7 +67,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
           await setDoc(ref, { items, updatedAt: serverTimestamp() }, { merge: true });
         }
       } catch (e) {
-        console.warn("Failed to sync wishlist from Firestore", e);
+
       }
     };
 
@@ -84,7 +84,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         const ref = doc(db, "users", user.id, "private", "wishlist");
         await setDoc(ref, { items, updatedAt: serverTimestamp() }, { merge: true });
       } catch (e) {
-        console.warn("Failed to update wishlist in Firestore", e);
+
       }
     };
     pushToRemote();

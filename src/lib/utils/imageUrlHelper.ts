@@ -13,7 +13,7 @@
 export function getSafeImageUrl(url: string | null | undefined, fallback: string = '/placeholder-product.png'): string {
   // If URL is null, undefined, or empty string, return fallback
   if (!url) {
-    console.log('Image URL is empty, using fallback');
+
     return fallback;
   }
 
@@ -21,7 +21,7 @@ export function getSafeImageUrl(url: string | null | undefined, fallback: string
   const trimmedUrl = url.trim();
 
   if (trimmedUrl === '') {
-    console.log('Image URL is empty after trimming, using fallback');
+
     return fallback;
   }
 
@@ -55,7 +55,7 @@ export function getSafeImageUrl(url: string | null | undefined, fallback: string
       if (trimmedUrl.startsWith(oldSupabaseUrl)) {
         // Migrate old URL to new Supabase project
         const migratedUrl = trimmedUrl.replace(oldSupabaseUrl, newSupabaseUrl);
-        console.log('Migrating old Supabase URL:', trimmedUrl, '→', migratedUrl);
+
         return migratedUrl;
       }
 

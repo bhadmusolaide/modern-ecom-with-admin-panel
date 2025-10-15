@@ -31,19 +31,17 @@ export async function createCustomersForOrdersWithoutCustomers(options: {
       .limit(limit)
       .get();
 
-    console.log(`Found ${ordersSnap.size} recent orders, scanning for missing customers...`);
-
     for (const doc of ordersSnap.docs) {
       result.processed++;
       const order: any = { id: doc.id, ...doc.data() };
 
       if (order.customerId) {
-        console.log(`✅ Order ${order.id} already linked to customer ${order.customerId}`);
+
         continue;
       }
 
       if (dryRun) {
-        console.log(`DRY RUN: Would create/link customer for order ${order.id} (${order.email})`);
+
         result.created++;
         continue;
       }
@@ -98,7 +96,6 @@ export async function createCustomersForOrdersWithoutCustomers(options: {
           updatedAt: new Date().toISOString(),
         });
 
-        console.log(`✅ Linked order ${order.id} -> customer ${customerId}`);
         result.created++;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -108,7 +105,6 @@ export async function createCustomersForOrdersWithoutCustomers(options: {
       }
     }
 
-    console.log(`Completed: processed=${result.processed}, created=${result.created}, failed=${result.failed}`);
     return result;
   } catch (error) {
     console.error('Error in createCustomersForOrdersWithoutCustomers:', error);
@@ -174,7 +170,6 @@ export async function createCustomerForSpecificOrder(orderId: string): Promise<s
       updatedAt: new Date().toISOString(),
     });
 
-    console.log(`Successfully created/linked customer ${customerId} for order ${orderId}`);
     return customerId;
   } catch (error) {
     console.error(`Failed to create customer for order ${orderId}:`, error);

@@ -57,11 +57,9 @@ async function fetchCsrfToken(): Promise<string> {
   // If we have a cached token that hasn't expired, use it
   const now = Date.now();
   if (cachedCsrfToken && csrfTokenExpiry > now) {
-    console.log('Using cached CSRF token');
+
     return cachedCsrfToken;
   }
-
-  console.log('Fetching new CSRF token from /api/auth/csrf');
 
   try {
     // Make the request with explicit no-cache headers
@@ -96,8 +94,6 @@ async function fetchCsrfToken(): Promise<string> {
       throw new Error('CSRF token missing in response');
     }
 
-    console.log(`CSRF token fetched successfully, length: ${data.csrfToken.length}`);
-
     // Cache the token for 5 minutes (reduced from 10 minutes)
     cachedCsrfToken = data.csrfToken;
     csrfTokenExpiry = now + 5 * 60 * 1000;
@@ -108,7 +104,7 @@ async function fetchCsrfToken(): Promise<string> {
     // Return a fallback token for GET requests to prevent complete failure
     // This is only used for non-critical operations
     if (process.env.NODE_ENV !== 'production') {
-      console.warn('Using fallback CSRF token in development mode');
+
       return 'fallback-csrf-token-for-development-only';
     }
     throw new Error('Failed to fetch CSRF token');
@@ -134,9 +130,9 @@ export async function safeFetch<T = any>(
     // Try to get a fresh token directly from Firebase if available
     if (auth.currentUser) {
       try {
-        console.log('Getting fresh token directly from Firebase');
+
         token = await auth.currentUser.getIdToken(true);
-        console.log('Successfully got fresh token from Firebase');
+
       } catch (tokenError) {
         console.error('Error getting fresh token from Firebase:', tokenError);
         // Fall back to the stored token
@@ -151,7 +147,7 @@ export async function safeFetch<T = any>(
     // Include auth token if requested and available
     if (options.includeAuth !== false && token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('Added Authorization header with token');
+
     }
 
     // Set up the request body
@@ -161,20 +157,17 @@ export async function safeFetch<T = any>(
     const method = options.method?.toUpperCase() || 'GET';
     const shouldIncludeCsrf = options.includeCsrf ?? (method !== 'GET');
 
-    console.log(`Request to ${url}, method: ${method}, shouldIncludeCsrf: ${shouldIncludeCsrf}`);
-
     // If we need to include a CSRF token and the request has a JSON body
     if (shouldIncludeCsrf) {
       // Set content type to JSON if not already set
       if (!options.headers || !('Content-Type' in (options.headers as any))) {
         headers['Content-Type'] = 'application/json';
-        console.log('Setting Content-Type to application/json');
+
       }
 
       try {
         // Get the CSRF token
         const csrfToken = options.csrfToken || await fetchCsrfToken();
-        console.log(`Using CSRF token: ${csrfToken.substring(0, 10)}...`);
 
         // Also add the token to headers for additional security
         headers['X-CSRF-Token'] = csrfToken;
@@ -199,12 +192,12 @@ export async function safeFetch<T = any>(
 
         // Stringify the body
         requestBody = JSON.stringify(bodyObj);
-        console.log('CSRF token added to request body');
+
       } catch (csrfError) {
         console.error('Error handling CSRF token:', csrfError);
         // Continue with the request without CSRF token in development
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('Continuing without CSRF token in development mode');
+
         } else {
           throw csrfError;
         }
@@ -220,7 +213,6 @@ export async function safeFetch<T = any>(
 
     // If authentication failed and retryWithFreshToken is enabled, try to refresh the token and retry
     if (response.status === 401 && options.retryWithFreshToken !== false && auth.currentUser) {
-      console.log('Authentication failed, refreshing token and retrying...');
 
       // Refresh the token
       const freshToken = await refreshTokenIfNeeded(auth.currentUser);
@@ -238,13 +230,13 @@ export async function safeFetch<T = any>(
 
         // If the retry succeeded, use the retry response
         if (retryResponse.ok) {
-          console.log('Retry with fresh token succeeded');
+
           const retryText = await retryResponse.text();
 
           try {
             return JSON.parse(retryText) as T;
           } catch (parseError) {
-            console.warn('Error parsing retry response as JSON:', parseError);
+
             return retryText as unknown as T;
           }
         }
@@ -259,8 +251,6 @@ export async function safeFetch<T = any>(
     try {
       data = JSON.parse(text);
     } catch (parseError) {
-      console.warn('Error parsing response as JSON:', parseError);
-      console.log('Response text:', text.substring(0, 200) + (text.length > 200 ? '...' : ''));
 
       // If response is not JSON and status is not OK, throw error with status
       if (!response.ok && options.throwOnError !== false) {

@@ -54,7 +54,7 @@ export default function ImageUploader({
   // Update imageUrl when initialImage changes
   useEffect(() => {
     if (initialImage && initialImage !== imageUrl) {
-      console.log('ImageUploader - initialImage changed:', initialImage);
+
       setImageUrl(initialImage);
     }
   }, [initialImage, imageUrl]);
@@ -160,17 +160,17 @@ export default function ImageUploader({
 
             // Check if we have a URL in the response
             if (data.url) {
-              console.log('ImageUploader - Received URL from API:', data.url);
+
               setImageUrl(data.url);
               setImageMetadata(data.metadata);
-              console.log('ImageUploader - Calling onImageChange with URL:', data.url);
+
               onImageChange(data.url, data.metadata);
             } else if (data.success && data.url) {
               // Alternative response format
-              console.log('ImageUploader - Received success URL from API:', data.url);
+
               setImageUrl(data.url);
               setImageMetadata(data.metadata);
-              console.log('ImageUploader - Calling onImageChange with success URL:', data.url);
+
               onImageChange(data.url, data.metadata);
             }
             // Check if we have a files array in the response (legacy format)
@@ -353,7 +353,7 @@ export default function ImageUploader({
 
               // Call the multiple upload callback if provided
               if (onMultipleUpload) {
-                console.log('ImageUploader - Calling onMultipleUpload with URLs:', data.urls);
+
                 onMultipleUpload(data.urls);
               }
             }
@@ -378,7 +378,7 @@ export default function ImageUploader({
 
               // Call the multiple upload callback if provided
               if (onMultipleUpload) {
-                console.log('ImageUploader (Supabase format) - Calling onMultipleUpload with URLs:', urls);
+
                 onMultipleUpload(urls);
               }
             }
@@ -388,7 +388,7 @@ export default function ImageUploader({
               onImageChange(data.url, data.metadata);
 
               if (onMultipleUpload) {
-                console.log('ImageUploader (Single URL format) - Calling onMultipleUpload with URL:', [data.url]);
+
                 onMultipleUpload([data.url]);
               }
             }
@@ -542,7 +542,7 @@ export default function ImageUploader({
           const data = await response.json();
           if (data.url) {
             directImageUrl = data.url;
-            console.log(`Converted Pexels URL: ${urlInput} → ${directImageUrl}`);
+
             setUploadProgress(20);
           }
         }
@@ -558,7 +558,7 @@ export default function ImageUploader({
 
     if (!hasImageExtension) {
       // If no image extension, warn the user but don't block the upload
-      console.warn('URL does not end with a common image extension. Upload may fail if not an image.');
+
     }
 
     setError(null);
@@ -605,20 +605,19 @@ export default function ImageUploader({
       }
 
       const data = await response.json();
-      console.log('URL upload response data:', data);
 
       if (data.url) {
-        console.log('URL upload - Setting image URL:', data.url);
+
         setImageUrl(data.url);
         setImageMetadata(data.metadata);
-        console.log('URL upload - Calling onImageChange with URL:', data.url);
+
         onImageChange(data.url, data.metadata);
       } else if (data.success && data.url) {
         // Alternative response format
-        console.log('URL upload - Setting success image URL:', data.url);
+
         setImageUrl(data.url);
         setImageMetadata(data.metadata);
-        console.log('URL upload - Calling onImageChange with success URL:', data.url);
+
         onImageChange(data.url, data.metadata);
       } else {
         console.error('URL upload - No URL found in response:', data);

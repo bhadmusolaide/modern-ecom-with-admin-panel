@@ -4,14 +4,6 @@ import { FooterSettings } from '@/lib/context/SiteSettingsContext';
 import { checkAccess } from '@/lib/auth/checkAccess';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
-
-
-
-
-
-
-
-
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
   return createApiResponse({  }, 200);
@@ -42,7 +34,6 @@ export async function PUT(request: NextRequest) {
 
     // Get incoming data
     const footerSettings = await request.json();
-    console.log('Updating footer settings from user:', userId);
 
     // Validate data
     if (!footerSettings || typeof footerSettings !== 'object') {
@@ -63,7 +54,7 @@ export async function PUT(request: NextRequest) {
     const settingsDoc = await settingsRef.get();
 
     if (!settingsDoc.exists) {
-      console.warn('Settings doc not found. Creating default.');
+
       await settingsRef.set({
         footer: footerSettings,
         createdAt: new Date(),

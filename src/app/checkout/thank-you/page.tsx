@@ -50,7 +50,7 @@ function ThankYouPageContent() {
         if (storedOrderData) {
           try {
             const parsedOrder = JSON.parse(storedOrderData);
-            console.log('Using order data from localStorage:', parsedOrder);
+
             setOrder(parsedOrder);
             setIsLoading(false);
             return;
@@ -60,13 +60,12 @@ function ThankYouPageContent() {
         }
 
         if (storedOrderId) {
-          console.log('No order ID in URL, but found in localStorage:', storedOrderId);
+
           router.replace(`/checkout/thank-you?orderId=${encodeURIComponent(storedOrderId)}`);
           return;
         }
       }
 
-      console.log('No order ID found, redirecting to home');
       router.push('/');
       return;
     }
@@ -75,7 +74,6 @@ function ThankYouPageContent() {
       try {
         setIsLoading(true);
 
-        console.log('Fetching order with ID:', orderId);
         const response = await fetch(`/api/orders/${orderId}`);
 
         if (!response.ok) {
@@ -88,7 +86,7 @@ function ThankYouPageContent() {
             if (storedOrderData) {
               try {
                 const parsedOrder = JSON.parse(storedOrderData);
-                console.log('API request failed, using order data from localStorage:', parsedOrder);
+
                 setOrder(parsedOrder);
                 setIsLoading(false);
                 return;
@@ -100,7 +98,7 @@ function ThankYouPageContent() {
 
           // If we get a 404 Not Found or authentication error, try localStorage fallback
           if (response.status === 404 || response.status === 401 || response.status === 403) {
-            console.log(`Order fetch failed with status ${response.status}, trying localStorage fallback`);
+
             // Don't throw error, let the localStorage fallback handle it
             return;
           }
@@ -109,11 +107,10 @@ function ThankYouPageContent() {
         }
 
         const responseText = await response.text();
-        console.log('Raw API response:', responseText);
 
         try {
           const data = JSON.parse(responseText);
-          console.log('Order data received:', data);
+
           setOrder(data);
 
           // Store successful order data in localStorage for future reference
@@ -277,7 +274,7 @@ function ThankYouPageContent() {
                     try {
                       return formatDate(order.payment.datePaid);
                     } catch (error) {
-                      console.warn('Error formatting payment date:', order.payment.datePaid, error);
+
                       return 'Invalid Date';
                     }
                   })()}`}

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 // Force dynamic rendering and disable static optimization
 export const dynamic = 'force-dynamic';
@@ -28,41 +28,20 @@ import { formatCurrency } from '@/lib/utils/format';
 // Data inspection utility to debug what's actually in Firestore
 const inspectFirestoreData = async (db: any) => {
   try {
-    console.log('🔍 Inspecting Firestore collections...');
+
     const { collection, getDocs } = await import('firebase/firestore');
 
     // Check orders collection
     const ordersRef = collection(db, 'orders');
     const ordersSnapshot = await getDocs(ordersRef);
-    console.log('📋 Orders collection:', {
-      count: ordersSnapshot.size,
-      documents: ordersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        data: doc.data()
-      }))
-    });
 
     // Check products collection
     const productsRef = collection(db, 'products');
     const productsSnapshot = await getDocs(productsRef);
-    console.log('📦 Products collection:', {
-      count: productsSnapshot.size,
-      documents: productsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        data: doc.data()
-      }))
-    });
 
     // Check users collection
     const usersRef = collection(db, 'users');
     const usersSnapshot = await getDocs(usersRef);
-    console.log('👥 Users collection:', {
-      count: usersSnapshot.size,
-      documents: usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        data: doc.data()
-      }))
-    });
 
     return {
       orders: ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
@@ -70,7 +49,7 @@ const inspectFirestoreData = async (db: any) => {
       users: usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     };
   } catch (error) {
-    console.error('❌ Error inspecting Firestore data:', error);
+    console.error('âŒ Error inspecting Firestore data:', error);
     return { orders: [], products: [], users: [] };
   }
 };
@@ -78,7 +57,7 @@ const inspectFirestoreData = async (db: any) => {
 // Sample data seeding function
 const seedSampleData = async (db: any) => {
   try {
-    console.log('🌱 Seeding sample data...');
+
     const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
 
     // Sample orders data
@@ -191,10 +170,9 @@ const seedSampleData = async (db: any) => {
       await addDoc(collection(db, 'users'), user);
     }
 
-    console.log('✅ Sample data seeded successfully');
     return true;
   } catch (error) {
-    console.error('❌ Error seeding sample data:', error);
+    console.error('âŒ Error seeding sample data:', error);
     return false;
   }
 };
@@ -240,8 +218,7 @@ const DashboardContent = () => {
   const [customerData, setCustomerData] = useState<{ label: string; value: number }[]>([]);
   const [previousRevenue, setPreviousRevenue] = useState(0);
 
-
-  // Get widget configurations
+// Get widget configurations
   const getWidgetConfig = (id: string) => {
     return widgets.find(w => w.id === id);
   };
@@ -249,11 +226,10 @@ const DashboardContent = () => {
   // Function to fetch data based on time range
   const fetchDataForTimeRange = async (timeRange: TimeRange) => {
     try {
-      console.log('🔄 Fetching dashboard data for time range:', timeRange);
 
       // Check if Firebase is properly initialized
       if (!db) {
-        console.error('❌ Firebase db is not initialized');
+        console.error('âŒ Firebase db is not initialized');
         throw new Error('Firebase database not initialized');
       }
       // Get date ranges based on selected time range
@@ -307,7 +283,7 @@ const DashboardContent = () => {
 
       // Fetch orders data
       if (!db) {
-        console.error('❌ Firebase db is not available');
+        console.error('âŒ Firebase db is not available');
         return;
       }
       const ordersRef = collection(db, 'orders');
@@ -341,12 +317,6 @@ const DashboardContent = () => {
       const productsSnapshot = await getDocs(productsRef);
       const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
-      console.log('📊 Fetched data:', {
-        currentOrders: currentOrders.length,
-        previousOrders: previousOrders.length,
-        products: products.length
-      });
-
       // Calculate order stats - using actual status values from database
       const pendingOrders = currentOrders.filter(order =>
         ['pending', 'awaiting_stock'].includes(order.status)
@@ -357,16 +327,6 @@ const DashboardContent = () => {
 
       const totalRevenue = currentOrders.reduce((sum, order) => sum + (order.total || 0), 0);
 
-      console.log('📊 Order stats calculated:', {
-        total: currentOrders.length,
-        pending: pendingOrders,
-        completed: completedOrders,
-        revenue: totalRevenue,
-        statusBreakdown: currentOrders.reduce((acc, order) => {
-          acc[order.status] = (acc[order.status] || 0) + 1;
-          return acc;
-        }, {})
-      });
 
        // Compute previous period revenue
        const prevRevenue = previousOrders.reduce((sum, order) => sum + (order.total || 0), 0);
@@ -454,8 +414,8 @@ const DashboardContent = () => {
         ]);
       }
     } catch (error) {
-      console.error('❌ Error fetching dashboard data:', error);
-      console.error('🔍 Error details:', {
+      console.error('âŒ Error fetching dashboard data:', error);
+      console.error('ðŸ” Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         timeRange,
@@ -559,7 +519,7 @@ const DashboardContent = () => {
 
         // Fetch category data from products collection
         if (!db) {
-          console.error('❌ Firebase db is not available for category data');
+          console.error('âŒ Firebase db is not available for category data');
           return;
         }
         const productsRef = collection(db, 'products');
@@ -612,19 +572,13 @@ const DashboardContent = () => {
 
         // First, inspect what's actually in the collections
         if (!db) {
-          console.error('❌ Firebase db not available for inspection');
+          console.error('âŒ Firebase db not available for inspection');
         } else {
           const existingData = await inspectFirestoreData(db);
 
-          console.log('📊 Existing data summary:', {
-            ordersCount: existingData.orders.length,
-            productsCount: existingData.products.length,
-            usersCount: existingData.users.length
-          });
-
           // If no data exists, seed sample data
           if (existingData.orders.length === 0 && existingData.products.length === 0) {
-            console.log('📊 No data found, seeding sample data...');
+
             await seedSampleData(db);
           }
         }
@@ -681,9 +635,7 @@ const DashboardContent = () => {
     }
   }, [globalTimeRange, isPageLoaded, fetchDataForTimeRange]);
 
-
-
-	  // Normalize Firestore Timestamp | ISO string | Date to Date
+// Normalize Firestore Timestamp | ISO string | Date to Date
 	  const normalizeDate = (val: any): Date | null => {
 	    if (!val) return null;
 	    if (typeof val?.toDate === 'function') return val.toDate();
@@ -732,13 +684,13 @@ const DashboardContent = () => {
 
 	    // Orders: stream recent and filter by current period to handle mixed createdAt types
 	    if (!db) {
-	      console.error('❌ Firebase db is not available for real-time orders');
+	      console.error('âŒ Firebase db is not available for real-time orders');
 	      return () => {};
 	    }
 	    const ordersRef = collection(db, 'orders');
 	    const ordersQueryRealtime = query(ordersRef, orderBy('createdAt', 'desc'), limit(1000));
 	    const unsubOrders = onSnapshot(ordersQueryRealtime, (snapshot) => {
-	      console.log('🔄 Real-time orders update:', snapshot.docs.length, 'documents');
+
 	      const allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 	      const currentOrders = allOrders.filter(o => {
 	        const d = normalizeDate(o.createdAt);
@@ -749,16 +701,6 @@ const DashboardContent = () => {
 	      const completedOrders = currentOrders.filter(o => ['shipped', 'delivered'].includes(o.status)).length;
 	      const currentTotalRevenue = currentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-	      console.log('🔄 Real-time order stats:', {
-	        total: currentOrders.length,
-	        pending: pendingOrders,
-	        completed: completedOrders,
-	        revenue: currentTotalRevenue,
-	        statusBreakdown: currentOrders.reduce((acc, o) => {
-	          acc[o.status] = (acc[o.status] || 0) + 1;
-	          return acc;
-	        }, {})
-	      });
 
 	      // Update the state with real-time data
 	      setOrderStats({
@@ -780,19 +722,13 @@ const DashboardContent = () => {
 	      setSalesData(currentSales.length > 0 ? currentSales : [{ label: 'No Data', value: 0 }]);
 	      setOrderStats({ total: currentOrders.length, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue });
 
-	      console.log('✅ Dashboard state updated:', {
-	        orders: { total: currentOrders.length, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue },
-	        salesDataPoints: currentSales.length,
-	        previousSalesDataPoints: previousSalesData.length,
-	        categoryDataPoints: categoryData.length
-	      });
 	    });
 	    unsubs.push(unsubOrders);
 
 	    // Products realtime (also feeds category chart)
 	    const productsRef = collection(db, 'products');
 	    const unsubProducts = onSnapshot(productsRef, (snapshot) => {
-	      console.log('🔄 Real-time products update:', snapshot.docs.length, 'documents');
+
 	      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 	      const lowStockProducts = products.filter(p => (p.stock > 0 && p.stock <= (p.lowStockThreshold ?? 5))).length;
 	      const outOfStockProducts = products.filter(p => p.stock === 0 || p.stock === undefined).length;
@@ -842,8 +778,7 @@ const DashboardContent = () => {
 		    });
 		    unsubs.push(unsubUsers);
 
-
-	    // Previous period snapshot (one-time via recent docs, filtered in JS)
+// Previous period snapshot (one-time via recent docs, filtered in JS)
 	    (async () => {
 	      try {
 	        const prevSnap = await getDocs(query(ordersRef, orderBy('createdAt', 'desc'), limit(1000)));
@@ -863,7 +798,7 @@ const DashboardContent = () => {
 	        const prevRev = prevOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 	        setPreviousRevenue(prevRev);
 	      } catch (e) {
-	        console.warn('Dashboard: Failed to compute previous period data', e);
+
 	      }
 	    })();
 

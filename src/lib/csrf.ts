@@ -16,7 +16,7 @@ export function getCsrfSecret(): string {
   try {
     // Use the consistent secret from environment variables
     if (!CSRF_SECRET) {
-      console.warn('CSRF_SECRET environment variable is not set. Using a temporary secret. This is NOT secure for production!');
+
       // Generate a temporary secret for development only
       return tokens.secretSync();
     }
@@ -47,14 +47,13 @@ export function verifyCsrfToken(formToken: string): boolean {
       return false;
     }
 
-    console.log(`Verifying CSRF token: ${formToken.substring(0, 10)}...`);
     const secret = getCsrfSecret();
     const isValid = tokens.verify(secret, formToken);
 
     if (!isValid) {
       console.error('CSRF token verification failed: Invalid token');
     } else {
-      console.log('CSRF token verification successful');
+
     }
 
     return isValid;
@@ -80,7 +79,7 @@ export function csrfProtection(request: Request): boolean {
     const csrfToken = request.headers.get('X-CSRF-Token');
 
     if (!csrfToken) {
-      console.warn('CSRF protection failed: No CSRF token in request header');
+
       return false;
     }
 

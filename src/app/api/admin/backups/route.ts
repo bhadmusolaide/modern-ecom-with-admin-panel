@@ -28,8 +28,6 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
-    console.log('Admin access granted for user:', access.userId);
-
     // Get system backups from Firestore
     const backupsSnapshot = await db.collection('system_backups')
       .orderBy('createdAt', 'desc')
@@ -72,8 +70,6 @@ export async function POST(request: NextRequest) {
     if (!access.isAdmin) {
       return createErrorResponse('Forbidden. Admin access required.', 403);
     }
-
-    console.log('Admin access granted for user:', access.userId);
 
     // Parse request body
     const body = await request.json();

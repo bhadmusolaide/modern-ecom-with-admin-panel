@@ -140,11 +140,8 @@ function OrdersPage() {
         params.append('dateTo', dateTo);
       }
 
-      console.log(`Admin orders page: Fetching orders from /api/orders?${params.toString()}`);
-
       // Get a fresh token directly from Firebase
       const token = await getIdToken();
-      console.log('Admin orders page: Got fresh token:', token ? 'Yes (token available)' : 'No (token not available)');
 
       try {
         // First try using the API
@@ -154,19 +151,17 @@ function OrdersPage() {
           } : undefined
         });
 
-        console.log('Admin orders page: Received orders count from API:', data.orders?.length || 0);
-
         if (data.orders && data.orders.length > 0) {
           setOrders(data.orders);
           setTotalPages(data.totalPages || 1);
           setTotalOrders(data.total || 0);
           return;
         } else {
-          console.log('Admin orders page: No orders returned from API, trying direct Firestore access');
+
         }
       } catch (apiError) {
         console.error('Error fetching orders from API:', apiError);
-        console.log('Admin orders page: Falling back to direct Firestore access');
+
       }
 
       // If API fails or returns no orders, try direct Firestore access
@@ -174,8 +169,6 @@ function OrdersPage() {
           // Import Firebase modules dynamically to avoid SSR issues
           const { collection, getDocs, query, orderBy, limit, startAfter, count } = await import('firebase/firestore');
           const { db } = await import('@/lib/firebase/config');
-
-          console.log('Admin orders page: Fetching orders directly from Firestore');
 
           // Create a query to get orders
           const ordersCollection = collection(db, 'orders');
@@ -219,8 +212,6 @@ function OrdersPage() {
             id: doc.id,
             ...doc.data()
           }));
-
-          console.log('Admin orders page: Received orders count from Firestore:', ordersData.length);
 
           // Update state with the fetched orders
           setOrders(ordersData);
@@ -312,26 +303,16 @@ function OrdersPage() {
     if (selectedOrders.size === 0) return;
 
     try {
-      // Import Firebase modules dynamically to avoid SSR issues
-      const { deleteOrder } = await import('@/lib/firebase/orders');
-      const { getAdminFirestore } = await import('@/lib/firebase/admin');
-
-      const deletePromises = Array.from(selectedOrders).map(async (orderId) => {
-        try {
-          // Use admin Firestore to bypass security rules for deletion
-          const adminDb = getAdminFirestore();
-          if (adminDb) {
-            const orderRef = adminDb.collection('orders').doc(orderId);
-            await orderRef.delete();
-          } else {
-            // Fallback to client SDK delete function
-            await deleteOrder(orderId);
+      const token = await getIdToken();
+      const deletePromises = Array.from(selectedOrders).map(orderId =>
+        safeFetch(`/api/admin/orders/${orderId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           }
-        } catch (error) {
-          console.error(`Error deleting order ${orderId}:`, error);
-          throw error;
-        }
-      });
+        })
+      );
 
       await Promise.all(deletePromises);
 
@@ -353,9 +334,6 @@ function OrdersPage() {
   }, [user, page, statusFilter, searchQuery, dateFrom, dateTo, fetchOrders]);
 
   // Log authentication state for debugging
-  console.log('Orders page - auth state:', {
-    user: user ? 'authenticated' : 'not authenticated'
-  });
 
   return (
     <PermissionGuard permissions={['orders:view']}>

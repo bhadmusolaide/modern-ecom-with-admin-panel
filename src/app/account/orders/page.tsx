@@ -26,11 +26,6 @@ export default function OrderHistoryPage() {
 
   // Check if user is authenticated
   useEffect(() => {
-    console.log('Orders page - auth state:', {
-      user: user ? 'authenticated' : 'not authenticated',
-      loading: authLoading,
-      isDev: process.env.NODE_ENV === 'development'
-    });
 
     if (!authLoading && !user) {
       showToast('Please log in to view your orders', 'error');
@@ -40,22 +35,14 @@ export default function OrderHistoryPage() {
 
   // Fetch user's orders
   useEffect(() => {
-    console.log('Account Orders: useEffect triggered with:', {
-      authLoading,
-      user: user ? 'authenticated' : 'not authenticated',
-      userId: user?.id,
-      currentPage,
-      pageSize
-    });
 
     const fetchOrders = async () => {
       // Skip if still loading auth or no user is authenticated
       if (authLoading || !user) {
-        console.log('Account Orders: Skipping fetch - auth loading or no user');
+
         return;
       }
 
-      console.log('Account Orders: fetchOrders called with user:', user?.id);
       setIsLoading(true);
 
       try {
@@ -66,11 +53,8 @@ export default function OrderHistoryPage() {
           sortDirection: 'desc'
         });
 
-        console.log('Account Orders: Making API request to:', `/api/orders?${params.toString()}`);
-
         // Get a fresh token directly from Firebase
         const token = await getIdToken();
-        console.log('Account Orders: Got fresh token:', token ? 'Yes (token available)' : 'No (token not available)');
 
         try {
           // Use safeFetch with fresh token
@@ -80,18 +64,16 @@ export default function OrderHistoryPage() {
             } : undefined
           });
 
-          console.log('Account Orders: Received orders count from API:', data.orders?.length || 0);
-
           if (data.orders && data.orders.length > 0) {
             setOrders(data.orders);
             setTotalOrders(data.total || 0);
             return;
           } else {
-            console.log('Account Orders: No orders returned from API, trying direct Firestore access');
+
           }
         } catch (apiError) {
           console.error('Error fetching orders from API:', apiError);
-          console.log('Account Orders: Falling back to direct Firestore access');
+
         }
 
         // If API fails or returns no orders, try direct Firestore access
@@ -99,8 +81,6 @@ export default function OrderHistoryPage() {
           // Import Firebase modules dynamically to avoid SSR issues
           const { collection, getDocs, query, where, orderBy, limit } = await import('firebase/firestore');
           const { db } = await import('@/lib/firebase/config');
-
-          console.log('Account Orders: Fetching orders directly from Firestore');
 
           // Create a query to get orders for the current user
           const ordersCollection = collection(db, 'orders');
@@ -119,8 +99,6 @@ export default function OrderHistoryPage() {
             id: doc.id,
             ...doc.data()
           } as Order));
-
-          console.log('Account Orders: Received orders count from Firestore:', ordersData.length);
 
           // Update state with the fetched orders
           setOrders(ordersData);
@@ -223,7 +201,7 @@ export default function OrderHistoryPage() {
                             try {
                               return order.createdAt ? formatDate(order.createdAt) : 'N/A';
                             } catch (error) {
-                              console.warn('Error formatting order date:', order.createdAt, error);
+
                               return 'Invalid Date';
                             }
                           })()}

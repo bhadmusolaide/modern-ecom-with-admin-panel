@@ -41,11 +41,9 @@ const Categories: React.FC<CategoriesProps> = ({ sectionData }) => {
       try {
         setLoading(true);
         const categoriesData = await getCategoriesWithProductCounts(false); // Force refresh from server
-        console.log('Fetched categories:', categoriesData);
 
         // Filter out categories with no image
         const validCategories = categoriesData.filter(cat => cat.image && cat.isActive !== false);
-        console.log('Valid categories:', validCategories);
 
         setCategories(validCategories);
         setError(null);

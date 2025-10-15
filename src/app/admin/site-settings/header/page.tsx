@@ -214,28 +214,23 @@ export default function HeaderSettingsPage() {
       };
 
       // Log detailed information for debugging
-      console.log('Saving header settings:', JSON.stringify(validatedHeaderSettings));
-      console.log('Current environment:', process.env.NODE_ENV);
-      console.log('Auth cookie present:', document.cookie.includes('auth-token'));
 
-      // Get auth token from cookies for debugging
+// Get auth token from cookies for debugging
       const authToken = document.cookie
         .split('; ')
         .find(row => row.startsWith('auth-token='))
         ?.split('=')[1];
-      console.log('Auth token present:', !!authToken);
 
       // Try to get token from Firebase directly
       try {
         const { auth } = await import('@/lib/firebase/config');
         if (auth.currentUser) {
           const token = await auth.currentUser.getIdToken(true);
-          console.log('Firebase token retrieved directly:', !!token);
 
           // Store token in window for potential use by other components
           window.__FIREBASE_TOKEN__ = token;
         } else {
-          console.log('No Firebase user found when saving header');
+
         }
       } catch (tokenError) {
         console.error('Error getting Firebase token:', tokenError);
@@ -254,11 +249,8 @@ export default function HeaderSettingsPage() {
         return authToken || window.__FIREBASE_TOKEN__ || null;
       })();
 
-      console.log('Final auth token being used:', finalAuthToken ? 'Present (first 10 chars: ' + finalAuthToken.substring(0, 10) + '...)' : 'Missing');
-
       // Attempt to update header settings
       const result = await updateHeader(validatedHeaderSettings);
-      console.log('Header update successful:', result ? 'Yes' : 'No');
 
       // Only show success message if we got here (no errors thrown)
       showToast('Header settings saved successfully', 'success');
@@ -271,11 +263,8 @@ export default function HeaderSettingsPage() {
       showToast(`Error: ${errorMessage}`, 'error');
 
       // Log additional debugging information
-      console.log('Headers settings that failed to save:', headerSettings);
-      console.log('Current URL:', window.location.href);
-      console.log('All cookies:', document.cookie);
 
-      // If it's an authentication error, provide more guidance
+// If it's an authentication error, provide more guidance
       if (errorMessage.includes('Authentication required') || errorMessage.includes('401')) {
         showToast('You need to log in as an admin to save settings', 'error');
         // Optional: Redirect to login page

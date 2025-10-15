@@ -3,12 +3,9 @@ import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 
 export async function GET() {
   try {
-    console.log('CSRF token generation requested');
 
     // Generate a token using our function
     const csrfToken = generateCsrfToken();
-
-    console.log(`CSRF token generated successfully, length: ${csrfToken.length}, preview: ${csrfToken.substring(0, 10)}...`);
 
     // Return the token in the response
     const response = createApiResponse({ csrfToken });

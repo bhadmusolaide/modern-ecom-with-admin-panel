@@ -58,7 +58,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     let tokenRefreshInterval: NodeJS.Timeout | null = null;
 
     const initializeAuth = async (): Promise<() => void> => {
-      console.log('Setting up Firebase auth state listener');
+
       const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
         if (!isMounted) return;
 
@@ -66,12 +66,10 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
 
         if (fbUser) {
           try {
-            console.log('Firebase user authenticated:', fbUser.uid);
 
             // Get the ID token and store it securely
             const token = await fbUser.getIdToken();
             await storeAuthToken(token);
-            console.log('Firebase ID token stored securely');
 
             // Get user data from Firestore
             const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
@@ -94,7 +92,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
                 updatedAt: serverTimestamp()
               });
             } else if (isMounted) {
-              console.log('User document does not exist in Firestore');
+
               // Basic user data from Firebase Auth
               setUser({
                 id: fbUser.uid,
@@ -115,10 +113,9 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
             tokenRefreshInterval = setInterval(async () => {
               try {
                 if (auth.currentUser) {
-                  console.log('Refreshing Firebase ID token');
+
                   const newToken = await auth.currentUser.getIdToken(true);
                   await storeAuthToken(newToken);
-                  console.log('Firebase ID token refreshed successfully');
 
                   // Update the user object with the new token
                   setUser(prevUser => {
@@ -138,7 +135,7 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
             if (isMounted) setUser(null);
           }
         } else {
-          console.log('No Firebase user authenticated');
+
           if (isMounted) setUser(null);
 
           // Clear token refresh interval if user is logged out
@@ -189,7 +186,6 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log('Attempting to log in with Firebase:', email);
 
       // Sign in with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -253,7 +249,6 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
   const signup = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      console.log('Attempting to sign up with Firebase:', email);
 
       // Create user with Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -319,13 +314,13 @@ export function FirebaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       // First check if we have a token in the user object
       if (user?.token) {
-        console.log('Using token from user object');
+
         return user.token;
       }
 
       // Otherwise, get a fresh token from Firebase
       if (firebaseUser) {
-        console.log('Getting fresh token from Firebase');
+
         // Use a direct call to the Firebase SDK function to avoid infinite recursion
         const token = await firebaseUser.getIdToken(true); // Force refresh
 

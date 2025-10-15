@@ -75,7 +75,7 @@ function PaymentPageContent() {
               headers['Authorization'] = `Bearer ${token}`;
             }
           } catch (tokenError) {
-            console.warn('Could not get auth token:', tokenError);
+
           }
         }
 
@@ -89,19 +89,19 @@ function PaymentPageContent() {
 
           // If it's a 404 and we haven't retried yet, wait and retry once
           if (response.status === 404 && retryCount === 0) {
-            console.log('Order not found, retrying in 2 seconds...');
+
             setTimeout(() => fetchOrder(1), 2000);
             return;
           }
 
           // If it's a 403 (permission denied), try to get order from localStorage as fallback
           if (response.status === 403) {
-            console.log('Permission denied, trying localStorage fallback');
+
             const savedOrderData = localStorage.getItem('lastOrderData');
             if (savedOrderData) {
               try {
                 const orderData = JSON.parse(savedOrderData);
-                console.log('Found order in localStorage:', orderData);
+
                 setOrder(orderData);
 
                 // Show a warning that we're using cached data
@@ -121,7 +121,7 @@ function PaymentPageContent() {
                         authHeaders['Authorization'] = `Bearer ${token}`;
                       }
                     } catch (tokenError) {
-                      console.warn('Could not get auth token for payment intent:', tokenError);
+
                     }
                   }
         
@@ -146,7 +146,6 @@ function PaymentPageContent() {
         }
 
         const data = await response.json();
-        console.log('Order fetched successfully:', data);
 
         if (!data.order) {
           throw new Error('Order data not found in response');
@@ -168,7 +167,7 @@ function PaymentPageContent() {
                 authHeaders['Authorization'] = `Bearer ${token}`;
               }
             } catch (tokenError) {
-              console.warn('Could not get auth token for payment intent:', tokenError);
+
             }
           }
 
