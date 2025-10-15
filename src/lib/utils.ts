@@ -101,7 +101,7 @@ export function filterProducts(
 /**
  * Format a price as a currency string
  * @param price - The price to format
- * @param currency - The currency code (default: USD)
+ * @param currency - The currency code (default: NGN)
  * @param minimumFractionDigits - Minimum fraction digits (default: 0)
  * @param maximumFractionDigits - Maximum fraction digits (default: 0)
  * @returns Formatted price string
@@ -112,7 +112,10 @@ export function formatPrice(
   minimumFractionDigits: number = 0,
   maximumFractionDigits: number = 0
 ): string {
-  return new Intl.NumberFormat('en-US', {
+  // Use en-NG locale for Nigerian formatting, but allow currency override
+  const locale = currency === 'NGN' ? 'en-NG' : 'en-US';
+
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     minimumFractionDigits,

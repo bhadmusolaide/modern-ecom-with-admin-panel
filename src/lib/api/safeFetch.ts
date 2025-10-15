@@ -273,7 +273,12 @@ export async function safeFetch<T = any>(
 
     // Handle API error responses
     if (!response.ok && options.throwOnError !== false) {
-      const errorMessage = data?.error || data?.message || `API request failed with status ${response.status}`;
+      let errorMessage = data?.error || data?.message || `API request failed with status ${response.status}`;
+      // In development, append server-provided details to the error message to aid debugging
+      if (process.env.NODE_ENV !== 'production' && data?.details) {
+        const detailsStr = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
+        errorMessage = `${errorMessage}: ${detailsStr}`;
+      }
       console.error('API error response:', {
         url,
         status: response.status,

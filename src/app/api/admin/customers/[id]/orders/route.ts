@@ -76,15 +76,9 @@ export async function GET(
           customerData: customerData ? 'exists' : 'missing'
         });
 
-        if (userId) {
-          // If we have a userId, query by that first
-          console.log(`Querying orders by userId: ${userId}`);
-          ordersQuery = db.collection('orders').where('userId', '==', userId);
-        } else {
-          // Otherwise, query by customerId
-          console.log(`Querying orders by customerId: ${customerId}`);
-          ordersQuery = db.collection('orders').where('customerId', '==', customerId);
-        }
+        // Always try to query by customerId first (most reliable)
+        console.log(`Querying orders by customerId: ${customerId}`);
+        ordersQuery = db.collection('orders').where('customerId', '==', customerId);
 
         // Add ordering after the where clause
         ordersQuery = ordersQuery.orderBy('createdAt', 'desc');
@@ -113,7 +107,6 @@ export async function GET(
             };
           } catch (dateError) {
             console.error(`Error processing dates for order ${doc.id}:`, dateError);
-            // Return the document without date conversion if it fails
             return {
               id: doc.id,
               ...data,
@@ -130,10 +123,49 @@ export async function GET(
           message: 'Customer orders retrieved successfully'
         });
       } catch (queryError) {
+        // Fallback: handle missing composite index by removing orderBy and sorting in memory
+        const message = queryError instanceof Error ? queryError.message : String(queryError);
+        console.warn('Primary orders query failed, attempting fallback without orderBy. Reason:', message);
+        if (/FAILED_PRECONDITION|index/i.test(message)) {
+          try {
+            console.warn('Missing Firestore composite index for (customerId, createdAt). Using fallback query and in-memory sort.');
+            const fallbackSnap = await db.collection('orders')
+              .where('customerId', '==', customerId)
+              .get();
+
+            const docs = fallbackSnap.docs.sort((a, b) => {
+              const ad = a.data();
+              const bd = b.data();
+              const at = ad.createdAt?.toDate ? ad.createdAt.toDate().getTime() : new Date(ad.createdAt).getTime();
+              const bt = bd.createdAt?.toDate ? bd.createdAt.toDate().getTime() : new Date(bd.createdAt).getTime();
+              return bt - at; // desc
+            });
+
+            const orders = docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt
+              };
+            });
+
+            console.log(`Fallback succeeded, found ${orders.length} orders for customer ${customerId}`);
+            console.warn('Recommendation: add Firestore composite index for orders on fields: customerId (ASC), createdAt (DESC).');
+
+            return createApiResponse({
+              orders,
+              message: 'Customer orders retrieved successfully (fallback)'
+            });
+          } catch (fallbackError) {
+            console.error('Fallback query failed:', fallbackError);
+            throw new Error(`Error executing Firestore query (and fallback): ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+          }
+        }
+
         console.error('Error executing Firestore query:', queryError);
-        console.error('Query error details:', queryError instanceof Error ? queryError.message : 'Unknown error');
-        console.error('Query error stack:', queryError instanceof Error ? queryError.stack : 'No stack trace');
-        throw new Error(`Error executing Firestore query: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`);
+        throw new Error(`Error executing Firestore query: ${message}`);
       }
     } catch (ordersError) {
       console.error('Error fetching customer orders:', ordersError);

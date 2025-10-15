@@ -11,6 +11,8 @@ import { useToast } from '@/lib/context/ToastContext';
 import { Order } from '@/lib/types';
 import { handleSuccessfulPayment, handleFailedPayment } from '@/lib/payment/stripe';
 
+import { formatCurrency } from '@/lib/utils/format';
+
 interface PaymentFormProps {
   clientSecret: string;
   order: Order;
@@ -20,7 +22,7 @@ interface PaymentFormProps {
 
 /**
  * Payment Form Component
- * 
+ *
  * This component renders a Stripe payment form and handles the payment submission.
  */
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -32,19 +34,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const stripe = useStripe();
   const elements = useElements();
   const { showToast } = useToast();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (!stripe || !clientSecret) {
       return;
     }
-    
+
     // Check for payment intent status on component mount
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       if (!paymentIntent) return;
-      
+
       switch (paymentIntent.status) {
         case 'succeeded':
           showToast('Payment succeeded!', 'success');
@@ -68,19 +70,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
     });
   }, [stripe, clientSecret, order, onSuccess, onError, showToast]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!stripe || !elements) {
       // Stripe.js has not yet loaded.
       // Make sure to disable form submission until Stripe.js has loaded.
       return;
     }
-    
+
     setIsLoading(true);
     setErrorMessage(null);
-    
+
     try {
       // Confirm the payment
       const { error, paymentIntent } = await stripe.confirmPayment({
@@ -90,7 +92,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         },
         redirect: 'if_required',
       });
-      
+
       if (error) {
         // Show error to customer
         setErrorMessage(error.message || 'An unexpected error occurred.');
@@ -125,27 +127,27 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       setIsLoading(false);
     }
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Payment Element */}
       <div className="p-4 border border-gray-200 rounded-md bg-white">
         <PaymentElement />
       </div>
-      
+
       {/* Billing Address */}
       <div className="p-4 border border-gray-200 rounded-md bg-white">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Billing Address</h3>
         <AddressElement options={{ mode: 'billing' }} />
       </div>
-      
+
       {/* Error Message */}
       {errorMessage && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md">
           <p className="text-sm text-red-600">{errorMessage}</p>
         </div>
       )}
-      
+
       {/* Submit Button */}
       <button
         type="submit"
@@ -161,10 +163,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             Processing...
           </span>
         ) : (
-          `Pay ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(order.total / 100)}`
+          `Pay ${formatCurrency(order.total / 100)}`
         )}
       </button>
-      
+
       {/* Secure Payment Notice */}
       <p className="text-xs text-gray-500 text-center">
         Your payment information is processed securely. We do not store your credit card details.

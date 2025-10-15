@@ -140,7 +140,7 @@ export async function GET(
     }
 
     console.log(`API: Successfully fetched order ${id}`);
-    return createApiResponse({ order });
+    return createApiResponse(order);
   } catch (error) {
     console.error('API: Unhandled error in GET handler:', error);
     console.error('API: Error details:', error instanceof Error ? error.message : 'Unknown error');

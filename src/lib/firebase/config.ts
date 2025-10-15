@@ -14,28 +14,41 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Only initialize client SDK when config is present (prevents failures in server-side scripts)
+const hasClientConfig = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
 
-// Log minimal Firebase initialization status
-if (process.env.NODE_ENV === 'development') {
-  console.log('Firebase client initialized:', {
-    appInitialized: !!app,
-    authInitialized: !!auth,
-    dbInitialized: !!db,
-    projectId: firebaseConfig.projectId
-  });
-}
+let app: ReturnType<typeof getApp> | undefined;
+let auth: ReturnType<typeof getAuth> | undefined;
+let db: ReturnType<typeof getFirestore> | undefined;
 
-// Use Firebase emulator in development if enabled
-if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' && process.env.NODE_ENV === 'development') {
-  const { connectAuthEmulator } = require('firebase/auth');
-  const { connectFirestoreEmulator } = require('firebase/firestore');
+if (hasClientConfig) {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
 
-  connectAuthEmulator(auth, 'http://localhost:9099');
-  connectFirestoreEmulator(db, 'localhost', 8080);
+  // Use Firebase emulator in development if enabled
+  // Temporarily disabled to test with production Firebase
+  // if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true' && process.env.NODE_ENV === 'development') {
+  //   const { connectAuthEmulator } = require('firebase/auth');
+  //   const { connectFirestoreEmulator } = require('firebase/firestore');
+
+  //   connectAuthEmulator(auth, 'http://localhost:9099');
+  //   connectFirestoreEmulator(db, 'localhost', 8080);
+  // }
+
+  // Log minimal Firebase initialization status
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Firebase client initialized:', {
+      appInitialized: !!app,
+      authInitialized: !!auth,
+      dbInitialized: !!db,
+      projectId: firebaseConfig.projectId
+    });
+  }
+} else {
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Firebase client not initialized: missing NEXT_PUBLIC_* config');
+  }
 }
 
 export { app, auth, db };

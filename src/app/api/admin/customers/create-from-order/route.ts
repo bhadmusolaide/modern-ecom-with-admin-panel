@@ -66,9 +66,8 @@ export async function POST(request: NextRequest) {
     // Check if customer with this email already exists
     let existingCustomer;
     try {
-      const usersSnapshot = await db.collection('users')
+      const usersSnapshot = await db.collection('customers')
         .where('email', '==', order.email)
-        .where('role', '==', 'CUSTOMER')
         .limit(1)
         .get();
 
@@ -90,9 +89,9 @@ export async function POST(request: NextRequest) {
       customerId = existingCustomer.id;
       
       // Update order with customer ID if not already set
-      if (order.userId !== customerId) {
+      if (order.customerId !== customerId) {
         await db.collection('orders').doc(orderId).update({
-          userId: customerId,
+          customerId: customerId,
           isGuestOrder: false,
           updatedAt: new Date()
         });
@@ -133,18 +132,18 @@ export async function POST(request: NextRequest) {
       };
 
       // Create customer document in Firestore with a generated ID
-      const customerRef = await db.collection('users').add(customerData);
+      const customerRef = await db.collection('customers').add(customerData);
       customerId = customerRef.id;
 
       // Update order with customer ID
       await db.collection('orders').doc(orderId).update({
-        userId: customerId,
+        customerId: customerId,
         isGuestOrder: false,
         updatedAt: new Date()
       });
 
       // Get the created customer
-      const createdCustomerDoc = await db.collection('users').doc(customerId).get();
+      const createdCustomerDoc = await db.collection('customers').doc(customerId).get();
       const createdCustomer = {
         id: createdCustomerDoc.id,
         ...createdCustomerDoc.data(),

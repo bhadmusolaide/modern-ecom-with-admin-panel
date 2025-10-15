@@ -7,11 +7,13 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FiTrash2, FiChevronLeft, FiMinus, FiPlus, FiShoppingBag } from 'react-icons/fi';
 import { useCart } from '@/lib/context/CartContext';
+import { useSiteSettings } from '@/lib/context/SiteSettingsContext';
 import Button from '@/components/ui/Button';
 import { formatPrice } from '@/lib/utils';
 
 const CartPage: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { settings } = useSiteSettings();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Animation variants
@@ -138,7 +140,7 @@ const CartPage: React.FC = () => {
                 {/* Price */}
                 <div className="col-span-1 md:col-span-2 text-center flex items-center justify-between md:block">
                   <span className="md:hidden text-gray-500">Price:</span>
-                  <span className="font-medium">{formatPrice(item.price, 'NGN', 2, 2)}</span>
+                  <span className="font-medium">{formatPrice(item.price, settings?.currencyCode || 'NGN', 2, 2)}</span>
                 </div>
 
                 {/* Quantity */}
@@ -164,7 +166,7 @@ const CartPage: React.FC = () => {
                 {/* Total */}
                 <div className="col-span-1 md:col-span-2 text-center flex items-center justify-between md:block">
                   <span className="md:hidden text-gray-500">Total:</span>
-                  <span className="font-medium">{formatPrice(item.price * item.quantity, 'NGN', 2, 2)}</span>
+                  <span className="font-medium">{formatPrice(item.price * item.quantity, settings?.currencyCode || 'NGN', 2, 2)}</span>
                 </div>
               </motion.div>
             ))}
@@ -188,7 +190,7 @@ const CartPage: React.FC = () => {
             <div className="space-y-4 mb-6">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">{formatPrice(cart.subtotal, 'NGN', 2, 2)}</span>
+                <span className="font-medium">{formatPrice(cart.subtotal, settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
@@ -201,7 +203,7 @@ const CartPage: React.FC = () => {
               <div className="h-px bg-gray-200 my-4"></div>
               <div className="flex justify-between">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-lg font-bold">{formatPrice(cart.total, 'NGN', 2, 2)}</span>
+                <span className="text-lg font-bold">{formatPrice(cart.total, settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
             </div>
 

@@ -16,11 +16,15 @@ import {
   XCircle,
   TruckIcon,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  CheckSquare,
+  Square,
+  Trash2,
+  Edit3
 } from 'lucide-react';
 import Link from 'next/link';
 import { Order, OrderStatus } from '@/lib/types';
-import { formatCurrency } from '@/lib/utils/format';
+import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { withAdminPage } from '@/lib/auth/withAdminPage';
 import { safeFetch } from '@/lib/api/safeFetch';
 import PermissionGuard from '@/components/admin/PermissionGuard';
@@ -36,13 +40,18 @@ function OrdersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const pageSize = 10;
+  const pageSize = 20;
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Bulk operations
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<OrderStatus | ''>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Status color mapping
   const getStatusColor = (status: OrderStatus): string => {
@@ -161,40 +170,66 @@ function OrdersPage() {
       }
 
       // If API fails or returns no orders, try direct Firestore access
-      try {
-        // Import Firebase modules dynamically to avoid SSR issues
-        const { collection, getDocs, query, orderBy, limit, addDoc, serverTimestamp } = await import('firebase/firestore');
-        const { db } = await import('@/lib/firebase/config');
+        try {
+          // Import Firebase modules dynamically to avoid SSR issues
+          const { collection, getDocs, query, orderBy, limit, startAfter, count } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase/config');
 
-        console.log('Admin orders page: Fetching orders directly from Firestore');
+          console.log('Admin orders page: Fetching orders directly from Firestore');
 
-        // Create a query to get orders
-        const ordersCollection = collection(db, 'orders');
-        const ordersQuery = query(
-          ordersCollection,
-          orderBy('createdAt', 'desc'),
-          limit(pageSize)
-        );
+          // Create a query to get orders
+          const ordersCollection = collection(db, 'orders');
+          let ordersQuery = query(
+            ordersCollection,
+            orderBy('createdAt', 'desc')
+          );
 
-        // Execute the query
-        const querySnapshot = await getDocs(ordersQuery);
+          // Get total count for pagination
+          const totalOrdersSnapshot = await getDocs(ordersCollection);
+          const totalOrdersCount = totalOrdersSnapshot.size;
 
-        // Convert the query snapshot to an array of orders
-        const ordersData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+          // Apply limit for pagination
+          ordersQuery = query(ordersQuery, limit(pageSize));
+          
+          // If we're not on the first page, we need to get the correct documents to skip
+          if (page > 1) {
+            // First get all orders sorted by createdAt desc
+            const sortedQuery = query(
+              ordersCollection,
+              orderBy('createdAt', 'desc')
+            );
+            
+            // Get enough documents to reach our offset
+            const offset = (page - 1) * pageSize;
+            const offsetQuery = query(sortedQuery, limit(offset));
+            const offsetSnapshot = await getDocs(offsetQuery);
+            
+            // Get the last document from the offset query to use as our starting point
+            if (!offsetSnapshot.empty) {
+              const lastVisible = offsetSnapshot.docs[offsetSnapshot.docs.length - 1];
+              ordersQuery = query(ordersQuery, startAfter(lastVisible));
+            }
+          }
 
-        console.log('Admin orders page: Received orders count from Firestore:', ordersData.length);
+          // Execute the query
+          const querySnapshot = await getDocs(ordersQuery);
 
-        // Update state with the fetched orders
-        setOrders(ordersData);
-        setTotalPages(1); // Simplified pagination for direct access
-        setTotalOrders(ordersData.length);
-      } catch (firestoreError) {
-        console.error('Error fetching orders directly from Firestore:', firestoreError);
-        throw firestoreError; // Re-throw to be caught by outer catch
-      }
+          // Convert the query snapshot to an array of orders
+          const ordersData = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+
+          console.log('Admin orders page: Received orders count from Firestore:', ordersData.length);
+
+          // Update state with the fetched orders
+          setOrders(ordersData);
+          setTotalOrders(totalOrdersCount);
+          setTotalPages(Math.ceil(totalOrdersCount / pageSize));
+        } catch (firestoreError) {
+          console.error('Error fetching orders directly from Firestore:', firestoreError);
+          throw firestoreError; // Re-throw to be caught by outer catch
+        }
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again.');
@@ -206,6 +241,7 @@ function OrdersPage() {
   // Apply filters
   const applyFilters = () => {
     setPage(1); // Reset to first page when filters change
+    setSelectedOrders(new Set()); // Clear selection when filters change
     fetchOrders();
   };
 
@@ -222,6 +258,90 @@ function OrdersPage() {
   const goToPage = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
+    }
+  };
+
+  // Bulk operations handlers
+  const handleSelectOrder = (orderId: string, checked: boolean) => {
+    const newSelected = new Set(selectedOrders);
+    if (checked) {
+      newSelected.add(orderId);
+    } else {
+      newSelected.delete(orderId);
+    }
+    setSelectedOrders(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedOrders(new Set(orders.map(order => order.id)));
+    } else {
+      setSelectedOrders(new Set());
+    }
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (!bulkStatus || selectedOrders.size === 0) return;
+
+    try {
+      const token = await getIdToken();
+      const updatePromises = Array.from(selectedOrders).map(orderId =>
+        safeFetch(`/api/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: bulkStatus })
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      // Refresh orders and reset selection
+      await fetchOrders();
+      setSelectedOrders(new Set());
+      setBulkStatus('');
+    } catch (error) {
+      console.error('Error updating order statuses:', error);
+      setError('Failed to update order statuses. Please try again.');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrders.size === 0) return;
+
+    try {
+      // Import Firebase modules dynamically to avoid SSR issues
+      const { deleteOrder } = await import('@/lib/firebase/orders');
+      const { getAdminFirestore } = await import('@/lib/firebase/admin');
+
+      const deletePromises = Array.from(selectedOrders).map(async (orderId) => {
+        try {
+          // Use admin Firestore to bypass security rules for deletion
+          const adminDb = getAdminFirestore();
+          if (adminDb) {
+            const orderRef = adminDb.collection('orders').doc(orderId);
+            await orderRef.delete();
+          } else {
+            // Fallback to client SDK delete function
+            await deleteOrder(orderId);
+          }
+        } catch (error) {
+          console.error(`Error deleting order ${orderId}:`, error);
+          throw error;
+        }
+      });
+
+      await Promise.all(deletePromises);
+
+      // Refresh orders and reset selection
+      await fetchOrders();
+      setSelectedOrders(new Set());
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      setError('Failed to delete orders. Please try again.');
     }
   };
 
@@ -343,9 +463,59 @@ function OrdersPage() {
             </button>
           </div>
         </div>
-      </div>
+       </div>
 
-      {/* Orders Table */}
+       {/* Bulk Actions */}
+       {selectedOrders.size > 0 && (
+         <div className="bg-primary-50 rounded-lg border border-primary-200 p-4 mb-6">
+           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+             <div className="flex items-center space-x-2">
+               <span className="text-sm font-medium text-primary-900">
+                 {selectedOrders.size} order{selectedOrders.size > 1 ? 's' : ''} selected
+               </span>
+             </div>
+             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+               <div className="flex items-center space-x-2">
+                 <label htmlFor="bulkStatus" className="text-sm font-medium text-primary-700">
+                   Change Status:
+                 </label>
+                 <select
+                   id="bulkStatus"
+                   className="px-3 py-1 border border-primary-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                   value={bulkStatus}
+                   onChange={(e) => setBulkStatus(e.target.value as OrderStatus | '')}
+                 >
+                   <option value="">Select Status</option>
+                   {Object.values(OrderStatus).map((status) => (
+                     <option key={status} value={status}>
+                       {status.charAt(0) + status.slice(1).toLowerCase()}
+                     </option>
+                   ))}
+                 </select>
+               </div>
+               <div className="flex space-x-2">
+                 <button
+                   onClick={handleBulkStatusChange}
+                   disabled={!bulkStatus}
+                   className="px-3 py-1 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 disabled:bg-neutral-300 disabled:cursor-not-allowed transition-colors"
+                 >
+                   <Edit3 size={14} className="mr-1 inline" />
+                   Update Status
+                 </button>
+                 <button
+                   onClick={() => setShowDeleteConfirm(true)}
+                   className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+                 >
+                   <Trash2 size={14} className="mr-1 inline" />
+                   Delete Selected
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Orders Table */}
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
         {loading ? (
           <div className="p-8 flex justify-center">
@@ -389,6 +559,14 @@ function OrdersPage() {
               <table className="w-full">
                 <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider w-12">
+                      <input
+                        type="checkbox"
+                        className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                        checked={selectedOrders.size === orders.length && orders.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                       Order #
                     </th>
@@ -412,6 +590,14 @@ function OrdersPage() {
                 <tbody className="divide-y divide-neutral-200">
                   {orders.map((order) => (
                     <tr key={order.id} className="hover:bg-neutral-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                          checked={selectedOrders.has(order.id)}
+                          onChange={(e) => handleSelectOrder(order.id, e.target.checked)}
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-900">
                         {order.orderNumber}
                       </td>
@@ -420,7 +606,7 @@ function OrdersPage() {
                         <div className="text-xs text-neutral-500">{order.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                        {new Date(order.createdAt).toLocaleDateString()}
+                        {formatDate(order.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
@@ -480,6 +666,38 @@ function OrdersPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <div className="p-2 bg-red-100 rounded-full mr-3">
+                  <AlertCircle size={20} className="text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-900">Confirm Deletion</h3>
+              </div>
+              <p className="text-neutral-600 mb-6">
+                Are you sure you want to delete {selectedOrders.size} selected order{selectedOrders.size > 1 ? 's' : ''}?
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete Orders
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

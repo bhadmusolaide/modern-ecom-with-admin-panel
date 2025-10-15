@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { auth as adminAuth } from '@/lib/firebase/admin';
-import { db } from '@/lib/firebase/admin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { createApiResponse, createErrorResponse } from '@/lib/auth/apiResponse';
 import { checkAccess } from '@/lib/auth/checkAccess';
 
@@ -11,11 +10,18 @@ const loginAsUserSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Ensure we use properly initialized Admin SDK instances
+  const adminAuth = getAdminAuth();
+  const db = getAdminFirestore();
+
   try {
-    // Check if the request is from an admin
-    const isAdmin = await checkAccess(request);
-    if (!isAdmin) {
-      return createErrorResponse('Unauthorized', 403);
+    // Check access and ensure the requester is an authenticated admin
+    const access = await checkAccess(request);
+    if (!access.authenticated) {
+      return createErrorResponse(access.error || 'Authentication required', access.status || 401);
+    }
+    if (!access.isAdmin) {
+      return createErrorResponse('Forbidden. Admin access required.', 403);
     }
 
     const body = await request.json();
@@ -26,21 +32,38 @@ export async function POST(request: NextRequest) {
 
     const { userId } = validation.data;
 
-    // Get the target user's data
-    const userRecord = await adminAuth.getUser(userId);
-    const userDoc = await db.collection('users').doc(userId).get();
-
-    if (!userDoc.exists) {
-      return createErrorResponse('User not found', 404);
+    // Get the target user's data from Firebase Auth
+    let userRecord;
+    try {
+      userRecord = await adminAuth.getUser(userId);
+    } catch (e: any) {
+      if (e?.code === 'auth/user-not-found') {
+        return createErrorResponse('User not found in authentication', 404);
+      }
+      return createErrorResponse('Failed to retrieve user record', 500, { details: e?.message || String(e) });
     }
 
-    const userData = userDoc.data();
+    // Get the target user's Firestore profile (optional but preferred)
+    let userDoc;
+    try {
+      userDoc = await db.collection('users').doc(userId).get();
+    } catch (e: any) {
+      // Do not fail impersonation purely due to Firestore read error
+      userDoc = { exists: false, data: () => ({}) } as any;
+    }
+
+    const userData = userDoc.exists ? userDoc.data() : {};
 
     // Create a custom token for the target user
-    const customToken = await adminAuth.createCustomToken(userId, {
-      adminImpersonation: true,
-      originalAdminId: request.headers.get('x-admin-id')
-    });
+    let customToken: string;
+    try {
+      customToken = await adminAuth.createCustomToken(userId, {
+        adminImpersonation: true,
+        originalAdminId: access.userId
+      });
+    } catch (e: any) {
+      return createErrorResponse('Failed to create custom token', 500, { details: e?.message || String(e) });
+    }
 
     return createApiResponse({
       customToken,
@@ -60,4 +83,4 @@ export async function POST(request: NextRequest) {
       { details: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
-} 
+}

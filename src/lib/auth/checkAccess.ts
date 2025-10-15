@@ -24,7 +24,25 @@ export async function checkAccess(req: NextRequest): Promise<AuthResult> {
   console.log('checkAccess: Using Firebase authentication for all environments');
 
   // Get token from cookie first (preferred method)
-  const sessionCookie = req.cookies.get('session')?.value;
+  // Handle both NextRequest cookies and standard Request cookies
+  let sessionCookie: string | undefined;
+
+  try {
+    if (req.cookies && typeof req.cookies.get === 'function') {
+      sessionCookie = req.cookies.get('session')?.value;
+    } else if (req.headers && req.headers.get) {
+      // Fallback: try to get from cookie header
+      const cookieHeader = req.headers.get('cookie');
+      if (cookieHeader) {
+        const sessionMatch = cookieHeader.match(/session=([^;]+)/);
+        sessionCookie = sessionMatch ? sessionMatch[1] : undefined;
+      }
+    }
+  } catch (error) {
+    console.warn('checkAccess: Error accessing cookies:', error);
+    sessionCookie = undefined;
+  }
+
   console.log('checkAccess: Session cookie present:', !!sessionCookie);
 
   // Fallback to Authorization header if no cookie

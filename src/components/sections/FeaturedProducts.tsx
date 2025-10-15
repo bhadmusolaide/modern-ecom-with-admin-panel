@@ -12,6 +12,8 @@ import { getFeaturedProducts } from '@/lib/firebase/utils/queryOptimizer';
 import ProxiedImage from '../ui/ProxiedImage';
 import { useCart } from '@/lib/context/CartContext';
 
+import { formatPrice } from '@/lib/utils';
+
 interface FeaturedProductsProps {
   sectionData?: SiteSection;
 }
@@ -62,14 +64,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({ sectionData }) => {
     visible: { opacity: 1, y: 0 },
   };
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price);
-  };
+
 
   const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();

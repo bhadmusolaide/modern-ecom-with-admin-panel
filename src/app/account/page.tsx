@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Mail, Shield, Database,
-  FileText, Settings, LogOut
+  FileText, Settings, LogOut, Package
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
@@ -91,6 +91,16 @@ export default function AccountPage() {
                       onClick={() => router.push('/account/profile')}
                     >
                       Profile Settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<Package size={16} />}
+                      iconPosition="left"
+                      className="w-full justify-start"
+                      onClick={() => router.push('/account/orders')}
+                    >
+                      My Orders
                     </Button>
                     <Button
                       variant="outline"
@@ -190,7 +200,17 @@ export default function AccountPage() {
 
                   <Card className="p-6">
                     <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<Package size={16} />}
+                        iconPosition="left"
+                        className="w-full justify-start"
+                        onClick={() => router.push('/account/orders')}
+                      >
+                        My Orders
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

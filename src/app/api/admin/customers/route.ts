@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
             segment: data.segment || [],
             totalOrders: data.totalOrders || 0,
             totalSpent: data.totalSpent || 0,
-            lastOrderDate: data.lastOrderDate ? data.lastOrderDate.toDate() : null,
+            lastOrderDate: data.lastOrderDate && typeof data.lastOrderDate.toDate === 'function' ? data.lastOrderDate.toDate() : null,
             notes: data.notes,
             avatar: data.avatar,
             userId: data.userId,

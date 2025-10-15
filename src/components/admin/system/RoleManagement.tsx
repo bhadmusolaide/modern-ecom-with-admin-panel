@@ -10,6 +10,7 @@ import { useToast } from '@/lib/context/ToastContext';
 import { useActivity } from '@/lib/context/ActivityContext';
 import Section from '@/components/admin/layouts/Section';
 import { Role } from '@/lib/rbac/types';
+import { safeFetch } from '@/lib/api/safeFetch';
 
 const RoleManagement: React.FC = () => {
   const { showToast } = useToast();
@@ -52,13 +53,7 @@ const RoleManagement: React.FC = () => {
       try {
         console.log('RoleManagement: Fetching roles...');
         setIsLoading(true);
-        const response = await fetch('/api/admin/roles');
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch roles: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await safeFetch('/api/admin/roles');
         console.log('RoleManagement: Roles fetched successfully:', data.roles?.length || 0, 'roles');
 
         if (!data.roles || !Array.isArray(data.roles)) {
@@ -96,21 +91,12 @@ const RoleManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/admin/roles', {
+      const data = await safeFetch('/api/admin/roles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newRole,
-          csrfToken
-        }),
+          ...newRole
+        })
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create role');
-      }
-
-      const data = await response.json();
 
       // Update local state
       setRoles([...roles, data.role]);
@@ -147,20 +133,13 @@ const RoleManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/roles/${editingRole.id}`, {
+      await safeFetch(`/api/admin/roles/${editingRole.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editingRole.name,
-          description: editingRole.description,
-          csrfToken
-        }),
+          description: editingRole.description
+        })
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update role');
-      }
 
       // Update local state
       setRoles(roles.map(role =>
@@ -193,16 +172,10 @@ const RoleManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/roles/${roleId}`, {
+      await safeFetch(`/api/admin/roles/${roleId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csrfToken }),
+        body: JSON.stringify({})
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete role');
-      }
 
       // Update local state
       const deletedRole = roles.find(role => role.id === roleId);

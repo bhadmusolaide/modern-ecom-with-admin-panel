@@ -19,7 +19,7 @@ import {
   Phone,
   MapPin,
   CreditCard,
-  DollarSign,
+
   Calendar
 } from 'lucide-react';
 import Link from 'next/link';
@@ -1002,7 +1002,7 @@ function OrderDetailPage({ id }: { id: string }) {
                 )}
                 {order.payment?.status && (
                   <div className="flex items-center">
-                    <DollarSign size={18} className="text-neutral-500 mr-2" />
+                    <CreditCard size={18} className="text-neutral-500 mr-2" />
                     <div className="text-neutral-900">
                       Status: <span className={
                         order.payment.status === PaymentStatus.PAID

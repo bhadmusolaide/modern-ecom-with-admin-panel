@@ -432,41 +432,140 @@ export const getCustomerOrders = async (
       startAfter: startAfterDoc
     } = options;
 
-    // Build the query
-    let ordersQuery = query(
-      collection(db, ORDERS_COLLECTION),
-      where('customerId', '==', customerId),
-      orderBy('createdAt', sortDirection)
-    );
-
-    // Apply pagination
-    if (startAfterDoc) {
-      ordersQuery = query(
-        ordersQuery,
-        startAfter(startAfterDoc)
-      );
+    // First, get the customer to get their email
+    const customer = await getCustomerById(customerId);
+    if (!customer) {
+      throw new Error('Customer not found');
     }
 
-    // Apply limit
-    ordersQuery = query(
-      ordersQuery,
-      limit(limitCount)
-    );
+    console.log(`Getting orders for customer ${customerId} with email ${customer.email}`);
 
-    // Execute the query
-    const snapshot = await getDocs(ordersQuery);
+    // Try to get orders by customerId first (most efficient)
+    let orders: any[] = [];
+    let lastDoc: QueryDocumentSnapshot<DocumentData> | null = null;
 
-    // Convert the documents to Order objects
-    const orders = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate()
-    }));
+    try {
+      // Build the query for orders with customerId
+      let ordersQuery = query(
+        collection(db, ORDERS_COLLECTION),
+        where('customerId', '==', customerId),
+        orderBy('createdAt', sortDirection),
+        limit(limitCount * 2) // Get more to account for potential orphans
+      );
+
+      // Apply pagination
+      if (startAfterDoc) {
+        ordersQuery = query(
+          ordersQuery,
+          startAfter(startAfterDoc)
+        );
+      }
+
+      // Execute the query
+      const snapshot = await getDocs(ordersQuery);
+
+      // Convert the documents to Order objects
+      const ordersWithCustomerId = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+        linkedByCustomerId: true
+      }));
+
+      orders = ordersWithCustomerId;
+      lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+
+      console.log(`Found ${orders.length} orders by customerId`);
+    } catch (error) {
+      console.warn('Error querying orders by customerId:', error);
+      orders = [];
+    }
+
+    // If we have fewer orders than requested, try to find orders by email that might not have customerId set
+    if (orders.length < limitCount && customer.email) {
+      try {
+        console.log(`Looking for orders by email ${customer.email} that might be missing customerId`);
+
+        // Query orders by email that don't have customerId or have a different customerId
+        let orphanedOrdersQuery = query(
+          collection(db, ORDERS_COLLECTION),
+          where('email', '==', customer.email),
+          orderBy('createdAt', sortDirection),
+          limit(limitCount * 2)
+        );
+
+        // Apply pagination if we have a starting point
+        if (startAfterDoc && orders.length > 0) {
+          orphanedOrdersQuery = query(
+            orphanedOrdersQuery,
+            startAfter(startAfterDoc)
+          );
+        }
+
+        const orphanedSnapshot = await getDocs(orphanedOrdersQuery);
+
+        const orphanedOrders = orphanedSnapshot.docs
+          .map(doc => {
+            const data = doc.data() as any;
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate(),
+              updatedAt: data.updatedAt?.toDate(),
+              linkedByCustomerId: false
+            } as any;
+          })
+          .filter(order => !order.customerId || order.customerId !== customerId);
+
+        console.log(`Found ${orphanedOrders.length} potential orphaned orders for email ${customer.email}`);
+
+        // Merge and deduplicate orders
+        const combinedOrders = [...orders, ...orphanedOrders];
+
+        // Remove duplicates based on order ID
+        const uniqueOrders = combinedOrders.filter((order, index, self) =>
+          index === self.findIndex(o => o.id === order.id)
+        );
+
+        // Sort by createdAt
+        uniqueOrders.sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return sortDirection === 'desc' ? bDate - aDate : aDate - bDate;
+        });
+
+        // Apply limit
+        orders = uniqueOrders.slice(0, limitCount);
+        // For orphaned orders, we don't have a proper lastDoc, so set to null
+        lastDoc = null;
+
+        console.log(`Combined result: ${orders.length} total unique orders`);
+
+        // Update customerId for orphaned orders that should be linked
+        if (orphanedOrders.length > 0) {
+          console.log(`Updating customerId for ${orphanedOrders.length} orphaned orders`);
+          const batch = writeBatch(db);
+
+          orphanedOrders.forEach(order => {
+            const orderRef = doc(db, ORDERS_COLLECTION, order.id);
+            batch.update(orderRef, {
+              customerId,
+              updatedAt: serverTimestamp()
+            });
+          });
+
+          await batch.commit();
+          console.log(`Successfully updated customerId for orphaned orders`);
+        }
+      } catch (error) {
+        console.warn('Error finding orphaned orders by email:', error);
+      }
+    }
 
     return {
       orders,
-      lastDoc: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null
+      lastDoc: lastDoc ? { id: lastDoc.id } : null
     };
   } catch (error) {
     console.error('Error getting customer orders:', error);
@@ -487,24 +586,38 @@ export const calculateCustomerLifetimeValue = async (customerId: string) => {
 
     const snapshot = await getDocs(ordersQuery);
 
-    // Calculate total spent
+    // Calculate total spent and get the latest order date
     let totalSpent = 0;
+    let lastOrderDate: any = null;
+
     snapshot.docs.forEach(doc => {
       const order = doc.data();
       totalSpent += order.total || 0;
+
+      const orderDate = order.createdAt;
+      if (!lastOrderDate || (orderDate && orderDate > lastOrderDate)) {
+        lastOrderDate = orderDate;
+      }
     });
 
     // Update the customer with the calculated values
     const customerRef = doc(db, CUSTOMERS_COLLECTION, customerId);
-    await updateDoc(customerRef, {
+    const updateData: any = {
       totalOrders: snapshot.docs.length,
       totalSpent,
       updatedAt: serverTimestamp()
-    });
+    };
+
+    if (lastOrderDate) {
+      updateData.lastOrderDate = lastOrderDate;
+    }
+
+    await updateDoc(customerRef, updateData);
 
     return {
       totalOrders: snapshot.docs.length,
-      totalSpent
+      totalSpent,
+      lastOrderDate
     };
   } catch (error) {
     console.error('Error calculating customer lifetime value:', error);
@@ -513,22 +626,76 @@ export const calculateCustomerLifetimeValue = async (customerId: string) => {
 };
 
 /**
+ * Recalculate lifetime value for all customers
+ */
+export const recalculateAllCustomerLifetimeValues = async () => {
+  try {
+    console.log('Starting recalculation of all customer lifetime values');
+
+    // Get all customers
+    const customersSnapshot = await getDocs(customersRef);
+    const customers = customersSnapshot.docs;
+
+    console.log(`Found ${customers.length} customers to recalculate`);
+
+    const results = [];
+
+    for (const customerDoc of customers) {
+      const customerId = customerDoc.id;
+      const customerData = customerDoc.data();
+
+      try {
+        console.log(`Recalculating lifetime value for customer ${customerId} (${customerData.email})`);
+
+        const lifetimeValue = await calculateCustomerLifetimeValue(customerId);
+
+        results.push({
+          customerId,
+          email: customerData.email,
+          oldTotalOrders: customerData.totalOrders || 0,
+          oldTotalSpent: customerData.totalSpent || 0,
+          newTotalOrders: lifetimeValue.totalOrders,
+          newTotalSpent: lifetimeValue.totalSpent,
+          updated: true
+        });
+
+        console.log(`✅ Updated customer ${customerId}: ${lifetimeValue.totalOrders} orders, $${lifetimeValue.totalSpent}`);
+      } catch (error) {
+        console.error(`❌ Failed to recalculate customer ${customerId}:`, error);
+        results.push({
+          customerId,
+          email: customerData.email,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          updated: false
+        });
+      }
+    }
+
+    console.log('Completed recalculation of customer lifetime values');
+    return results;
+  } catch (error) {
+    console.error('Error recalculating all customer lifetime values:', error);
+    throw error;
+  }
+};
+
+/**
  * Create or update a customer from an order
  */
 export const createOrUpdateCustomerFromOrder = async (
-  orderData: {
-    id: string;
-    email: string;
-    customerName?: string;
-    shippingAddress?: any;
-    total?: number;
-    userId?: string;
-    createdAt?: any;
-  }
+ orderData: {
+   id: string;
+   email: string;
+   customerName?: string;
+   shippingAddress?: any;
+   total?: number;
+   userId?: string;
+   createdAt?: any;
+ }
 ) => {
-  try {
-    console.log('CustomerService: Starting customer creation/update for order:', orderData.id);
-    console.log('CustomerService: Order data:', JSON.stringify(orderData, null, 2));
+ try {
+   console.log('🔍 CustomerService: Starting customer creation/update for order:', orderData.id);
+   console.log('🔍 CustomerService: Order data:', JSON.stringify(orderData, null, 2));
 
     // Check if a customer with this email already exists
     console.log('CustomerService: Checking if customer exists with email:', orderData.email);
@@ -540,12 +707,18 @@ export const createOrUpdateCustomerFromOrder = async (
       // Update existing customer
       const customerRef = doc(db, CUSTOMERS_COLLECTION, existingCustomer.id);
 
-      const updateData = {
+      const updateData: any = {
         lastOrderDate: orderData.createdAt || serverTimestamp(),
         totalOrders: increment(1),
         totalSpent: increment(orderData.total || 0),
         updatedAt: serverTimestamp()
       };
+
+      // Set userId if it's not already set and we have one from the order
+      if (!existingCustomer.userId && orderData.userId) {
+        updateData.userId = orderData.userId;
+        console.log('CustomerService: Setting userId on existing customer:', orderData.userId);
+      }
 
       console.log('CustomerService: Update data:', JSON.stringify(updateData, null, 2));
 

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { Settings, ArrowUpRight, BarChart as BarChartIcon, Package, ShoppingBag, Globe, PieChart as PieChartIcon, Users, LineChart as LineChartIcon, Sliders, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, Timestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useSiteSettings } from '@/lib/context/SiteSettingsContext';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
@@ -22,6 +22,182 @@ import DashboardSettings from '@/components/admin/DashboardSettings';
 import TimeRangeSelector from '@/components/admin/TimeRangeSelector';
 import ActivityFeed from '@/components/admin/ActivityFeed';
 import { withAdminPage } from '@/lib/auth/withAdminPage';
+
+import { formatCurrency } from '@/lib/utils/format';
+
+// Data inspection utility to debug what's actually in Firestore
+const inspectFirestoreData = async (db: any) => {
+  try {
+    console.log('🔍 Inspecting Firestore collections...');
+    const { collection, getDocs } = await import('firebase/firestore');
+
+    // Check orders collection
+    const ordersRef = collection(db, 'orders');
+    const ordersSnapshot = await getDocs(ordersRef);
+    console.log('📋 Orders collection:', {
+      count: ordersSnapshot.size,
+      documents: ordersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      }))
+    });
+
+    // Check products collection
+    const productsRef = collection(db, 'products');
+    const productsSnapshot = await getDocs(productsRef);
+    console.log('📦 Products collection:', {
+      count: productsSnapshot.size,
+      documents: productsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      }))
+    });
+
+    // Check users collection
+    const usersRef = collection(db, 'users');
+    const usersSnapshot = await getDocs(usersRef);
+    console.log('👥 Users collection:', {
+      count: usersSnapshot.size,
+      documents: usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      }))
+    });
+
+    return {
+      orders: ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      products: productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      users: usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    };
+  } catch (error) {
+    console.error('❌ Error inspecting Firestore data:', error);
+    return { orders: [], products: [], users: [] };
+  }
+};
+
+// Sample data seeding function
+const seedSampleData = async (db: any) => {
+  try {
+    console.log('🌱 Seeding sample data...');
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+
+    // Sample orders data
+    const sampleOrders = [
+      {
+        customerName: 'John Doe',
+        customerEmail: 'john@example.com',
+        total: 89.99,
+        status: 'COMPLETED',
+        items: [
+          { name: 'Organic Cotton T-Shirt', price: 29.99, quantity: 2 },
+          { name: 'Denim Jeans', price: 59.99, quantity: 1 }
+        ],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      },
+      {
+        customerName: 'Jane Smith',
+        customerEmail: 'jane@example.com',
+        total: 145.50,
+        status: 'PENDING',
+        items: [
+          { name: 'Summer Dress', price: 45.50, quantity: 1 },
+          { name: 'Sandals', price: 55.00, quantity: 2 }
+        ],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      },
+      {
+        customerName: 'Mike Johnson',
+        customerEmail: 'mike@example.com',
+        total: 234.75,
+        status: 'DELIVERED',
+        items: [
+          { name: 'Leather Jacket', price: 129.99, quantity: 1 },
+          { name: 'Boots', price: 104.76, quantity: 1 }
+        ],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+    ];
+
+    // Seed orders
+    for (const order of sampleOrders) {
+      await addDoc(collection(db, 'orders'), order);
+    }
+
+    // Sample products data
+    const sampleProducts = [
+      {
+        name: 'Organic Cotton T-Shirt',
+        description: 'Comfortable and sustainable t-shirt made from organic cotton',
+        price: 29.99,
+        category: 'tops',
+        stock: 50,
+        lowStockThreshold: 10,
+        imageUrl: 'https://images.pexels.com/photos/5384423/pexels-photo-5384423.jpeg',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      },
+      {
+        name: 'Denim Jeans',
+        description: 'Classic fit denim jeans made from recycled materials',
+        price: 59.99,
+        category: 'bottoms',
+        stock: 25,
+        lowStockThreshold: 5,
+        imageUrl: 'https://images.pexels.com/photos/52518/jeans-pants-blue-shop-52518.jpeg',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      },
+      {
+        name: 'Summer Dress',
+        description: 'Light and airy summer dress perfect for warm weather',
+        price: 45.50,
+        category: 'one-pieces',
+        stock: 0,
+        lowStockThreshold: 5,
+        imageUrl: 'https://images.pexels.com/photos/5868743/pexels-photo-5868743.jpeg',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
+    ];
+
+    // Seed products
+    for (const product of sampleProducts) {
+      await addDoc(collection(db, 'products'), product);
+    }
+
+    // Sample users data
+    const sampleUsers = [
+      {
+        name: 'John Doe',
+        email: 'john@example.com',
+        role: 'customer',
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
+      },
+      {
+        name: 'Jane Smith',
+        email: 'jane@example.com',
+        role: 'customer',
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
+      }
+    ];
+
+    // Seed users
+    for (const user of sampleUsers) {
+      await addDoc(collection(db, 'users'), user);
+    }
+
+    console.log('✅ Sample data seeded successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error seeding sample data:', error);
+    return false;
+  }
+};
 
 // Main component that wraps the dashboard content with the providers
 function AdminDashboard() {
@@ -62,6 +238,8 @@ const DashboardContent = () => {
   const [previousSalesData, setPreviousSalesData] = useState<{ label: string; value: number }[]>([]);
   const [categoryData, setCategoryData] = useState<{ label: string; value: number }[]>([]);
   const [customerData, setCustomerData] = useState<{ label: string; value: number }[]>([]);
+  const [previousRevenue, setPreviousRevenue] = useState(0);
+
 
   // Get widget configurations
   const getWidgetConfig = (id: string) => {
@@ -71,6 +249,13 @@ const DashboardContent = () => {
   // Function to fetch data based on time range
   const fetchDataForTimeRange = async (timeRange: TimeRange) => {
     try {
+      console.log('🔄 Fetching dashboard data for time range:', timeRange);
+
+      // Check if Firebase is properly initialized
+      if (!db) {
+        console.error('❌ Firebase db is not initialized');
+        throw new Error('Firebase database not initialized');
+      }
       // Get date ranges based on selected time range
       const now = new Date();
       const currentPeriodStart = new Date();
@@ -121,46 +306,71 @@ const DashboardContent = () => {
       }
 
       // Fetch orders data
+      if (!db) {
+        console.error('❌ Firebase db is not available');
+        return;
+      }
       const ordersRef = collection(db, 'orders');
 
-      // Current period orders
-      const currentOrdersQuery = query(
-        ordersRef,
-        where('createdAt', '>=', currentPeriodStart),
-        where('createdAt', '<=', now)
-      );
+      // Fetch recent orders and filter by period in JS to handle mixed Timestamp/string/Date
+      const recentOrdersSnapshot = await getDocs(query(ordersRef, orderBy('createdAt', 'desc'), limit(1000)));
+      const allOrders = recentOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
-      // Previous period orders
-      const previousOrdersQuery = query(
-        ordersRef,
-        where('createdAt', '>=', previousPeriodStart),
-        where('createdAt', '<=', previousPeriodEnd)
-      );
+      const parseDate = (v: any): Date | null => {
+        if (!v) return null;
+        if (typeof v?.toDate === 'function') {
+          const d = v.toDate();
+          return isNaN(d.getTime()) ? null : d;
+        }
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
+      const currentOrders = allOrders.filter(o => {
+        const d = parseDate(o.createdAt);
+        return d && d >= currentPeriodStart && d <= now;
+      });
+
+      const previousOrders = allOrders.filter(o => {
+        const d = parseDate(o.createdAt);
+        return d && d >= previousPeriodStart && d <= previousPeriodEnd;
+      });
 
       // Fetch products data
       const productsRef = collection(db, 'products');
-      const productsQuery = query(productsRef);
+      const productsSnapshot = await getDocs(productsRef);
+      const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
-      // Execute queries
-      const [currentOrdersSnapshot, previousOrdersSnapshot, productsSnapshot] = await Promise.all([
-        getDocs(currentOrdersQuery),
-        getDocs(previousOrdersQuery),
-        getDocs(productsQuery)
-      ]);
+      console.log('📊 Fetched data:', {
+        currentOrders: currentOrders.length,
+        previousOrders: previousOrders.length,
+        products: products.length
+      });
 
-      // Process orders data
-      const currentOrders = currentOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const previousOrders = previousOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Process products data
-      const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Calculate order stats
-      const pendingOrders = currentOrders.filter(order => order.status === 'PENDING').length;
-      const completedOrders = currentOrders.filter(order =>
-        ['DELIVERED', 'COMPLETED'].includes(order.status)
+      // Calculate order stats - using actual status values from database
+      const pendingOrders = currentOrders.filter(order =>
+        ['pending', 'awaiting_stock'].includes(order.status)
       ).length;
+      const completedOrders = currentOrders.filter(order =>
+        ['shipped', 'delivered'].includes(order.status)
+      ).length;
+
       const totalRevenue = currentOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+      console.log('📊 Order stats calculated:', {
+        total: currentOrders.length,
+        pending: pendingOrders,
+        completed: completedOrders,
+        revenue: totalRevenue,
+        statusBreakdown: currentOrders.reduce((acc, order) => {
+          acc[order.status] = (acc[order.status] || 0) + 1;
+          return acc;
+        }, {})
+      });
+
+       // Compute previous period revenue
+       const prevRevenue = previousOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+       setPreviousRevenue(prevRevenue);
 
       // Calculate product stats
       const lowStockProducts = products.filter(product =>
@@ -200,8 +410,12 @@ const DashboardContent = () => {
       }
 
       // Update state with the fetched data
-      setSalesData(currentSalesData);
-      setPreviousSalesData(previousSalesData);
+      setSalesData(currentSalesData.length > 0 ? currentSalesData : [
+        { label: 'No Data', value: 0 }
+      ]);
+      setPreviousSalesData(previousSalesData.length > 0 ? previousSalesData : [
+        { label: 'No Data', value: 0 }
+      ]);
       setOrderStats({
         total: currentOrders.length,
         pending: pendingOrders,
@@ -213,8 +427,40 @@ const DashboardContent = () => {
         lowStock: lowStockProducts,
         outOfStock: outOfStockProducts
       });
+
+      // Set category data with fallback
+      if (products.length > 0) {
+        // Process categories from products
+        const categoryGroups = products.reduce((acc, product) => {
+          const category = product.category || 'Uncategorized';
+          if (!acc[category]) {
+            acc[category] = 0;
+          }
+          acc[category]++;
+          return acc;
+        }, {});
+
+        const categoryChartData = Object.entries(categoryGroups)
+          .map(([label, count]) => ({ label, value: count as number }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 4);
+
+        setCategoryData(categoryChartData.length > 0 ? categoryChartData : [
+          { label: 'No Categories', value: 0 }
+        ]);
+      } else {
+        setCategoryData([
+          { label: 'No Products', value: 0 }
+        ]);
+      }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
+      console.error('🔍 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        timeRange,
+        dbAvailable: !!db
+      });
       // Set default empty data in case of error
       setSalesData([]);
       setPreviousSalesData([]);
@@ -312,9 +558,13 @@ const DashboardContent = () => {
         await fetchDataForTimeRange(globalTimeRange);
 
         // Fetch category data from products collection
+        if (!db) {
+          console.error('❌ Firebase db is not available for category data');
+          return;
+        }
         const productsRef = collection(db, 'products');
         const productsSnapshot = await getDocs(productsRef);
-        const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
         // Group products by category
         const categoryGroups = products.reduce((acc, product) => {
@@ -327,14 +577,14 @@ const DashboardContent = () => {
         }, {});
 
         // Convert to chart data format
-        const categoryChartData = Object.entries(categoryGroups)
-          .map(([label, count]) => ({ label, value: count }))
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 4); // Top 4 categories
+         const categoryChartData = Object.entries(categoryGroups)
+           .map(([label, count]) => ({ label, value: count as number }))
+           .sort((a, b) => b.value - a.value)
+           .slice(0, 4); // Top 4 categories
 
-        setCategoryData(categoryChartData.length > 0 ? categoryChartData : [
-          { label: 'No Categories', value: 0 }
-        ]);
+         setCategoryData(categoryChartData.length > 0 ? categoryChartData : [
+           { label: 'No Categories', value: 0 }
+         ]);
 
         // Fetch customer data
         const usersRef = collection(db, 'users');
@@ -360,6 +610,25 @@ const DashboardContent = () => {
           { label: 'Returning', value: returningUsers > 0 ? Math.round((returningUsers / totalUsers) * 100) : 0 }
         ]);
 
+        // First, inspect what's actually in the collections
+        if (!db) {
+          console.error('❌ Firebase db not available for inspection');
+        } else {
+          const existingData = await inspectFirestoreData(db);
+
+          console.log('📊 Existing data summary:', {
+            ordersCount: existingData.orders.length,
+            productsCount: existingData.products.length,
+            usersCount: existingData.users.length
+          });
+
+          // If no data exists, seed sample data
+          if (existingData.orders.length === 0 && existingData.products.length === 0) {
+            console.log('📊 No data found, seeding sample data...');
+            await seedSampleData(db);
+          }
+        }
+
         // Fetch real activities if none exist in context
         if (activities.length === 0) {
           const activitiesRef = collection(db, 'activities');
@@ -381,8 +650,7 @@ const DashboardContent = () => {
                   action: activityData.action,
                   description: activityData.description,
                   targetId: activityData.targetId,
-                  targetName: activityData.targetName,
-                  timestamp: activityData.timestamp?.toDate() || new Date()
+                  targetName: activityData.targetName
                 });
               }, index * 100);
             });
@@ -413,7 +681,196 @@ const DashboardContent = () => {
     }
   }, [globalTimeRange, isPageLoaded, fetchDataForTimeRange]);
 
-  if (settingsLoading || !isPageLoaded) {
+
+
+	  // Normalize Firestore Timestamp | ISO string | Date to Date
+	  const normalizeDate = (val: any): Date | null => {
+	    if (!val) return null;
+	    if (typeof val?.toDate === 'function') return val.toDate();
+	    if (typeof val === 'string') {
+	      const d = new Date(val);
+	      return isNaN(d.getTime()) ? null : d;
+	    }
+	    if (val instanceof Date) return val;
+	    return null;
+	  };
+
+	  // Realtime subscriptions for current period data (orders/products/users)
+	  useEffect(() => {
+	    if (!isPageLoaded) return;
+
+	    const now = new Date();
+	    const currentStart = new Date();
+	    const prevStart = new Date();
+	    const prevEnd = new Date();
+
+	    // Compute period boundaries based on globalTimeRange
+	    switch (globalTimeRange) {
+	      case 'day':
+	        currentStart.setHours(0, 0, 0, 0);
+	        prevStart.setDate(now.getDate() - 1); prevStart.setHours(0, 0, 0, 0);
+	        prevEnd.setDate(now.getDate() - 1); prevEnd.setHours(23, 59, 59, 999);
+	        break;
+	      case 'week':
+	        currentStart.setDate(now.getDate() - now.getDay()); currentStart.setHours(0, 0, 0, 0);
+	        prevStart.setDate(currentStart.getDate() - 7);
+	        prevEnd.setDate(currentStart.getDate() - 1); prevEnd.setHours(23, 59, 59, 999);
+	        break;
+	      case 'month':
+	        currentStart.setDate(1); currentStart.setHours(0, 0, 0, 0);
+	        prevStart.setMonth(prevStart.getMonth() - 1); prevStart.setDate(1); prevStart.setHours(0, 0, 0, 0);
+	        prevEnd.setDate(0); prevEnd.setHours(23, 59, 59, 999);
+	        break;
+	      case 'year':
+	        currentStart.setMonth(0, 1); currentStart.setHours(0, 0, 0, 0);
+	        prevStart.setFullYear(prevStart.getFullYear() - 1); prevStart.setMonth(0, 1); prevStart.setHours(0, 0, 0, 0);
+	        prevEnd.setFullYear(prevEnd.getFullYear() - 1); prevEnd.setMonth(11, 31); prevEnd.setHours(23, 59, 59, 999);
+	        break;
+	    }
+
+	    const unsubs: Array<() => void> = [];
+
+	    // Orders: stream recent and filter by current period to handle mixed createdAt types
+	    if (!db) {
+	      console.error('❌ Firebase db is not available for real-time orders');
+	      return () => {};
+	    }
+	    const ordersRef = collection(db, 'orders');
+	    const ordersQueryRealtime = query(ordersRef, orderBy('createdAt', 'desc'), limit(1000));
+	    const unsubOrders = onSnapshot(ordersQueryRealtime, (snapshot) => {
+	      console.log('🔄 Real-time orders update:', snapshot.docs.length, 'documents');
+	      const allOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+	      const currentOrders = allOrders.filter(o => {
+	        const d = normalizeDate(o.createdAt);
+	        return d && d >= currentStart && d <= now;
+	      });
+
+	      const pendingOrders = currentOrders.filter(o => ['pending', 'awaiting_stock'].includes(o.status)).length;
+	      const completedOrders = currentOrders.filter(o => ['shipped', 'delivered'].includes(o.status)).length;
+	      const currentTotalRevenue = currentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+	      console.log('🔄 Real-time order stats:', {
+	        total: currentOrders.length,
+	        pending: pendingOrders,
+	        completed: completedOrders,
+	        revenue: currentTotalRevenue,
+	        statusBreakdown: currentOrders.reduce((acc, o) => {
+	          acc[o.status] = (acc[o.status] || 0) + 1;
+	          return acc;
+	        }, {})
+	      });
+
+	      // Update the state with real-time data
+	      setOrderStats({
+	        total: currentOrders.length,
+	        pending: pendingOrders,
+	        completed: completedOrders,
+	        revenue: currentTotalRevenue
+	      });
+	      const totalRevenue = currentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+	      let currentSales: { label: string; value: number }[] = [];
+	      switch (globalTimeRange) {
+	        case 'day': currentSales = groupOrdersByHour(currentOrders); break;
+	        case 'week': currentSales = groupOrdersByDayOfWeek(currentOrders); break;
+	        case 'month': currentSales = groupOrdersByWeek(currentOrders); break;
+	        case 'year': currentSales = groupOrdersByMonth(currentOrders); break;
+	      }
+
+	      setSalesData(currentSales.length > 0 ? currentSales : [{ label: 'No Data', value: 0 }]);
+	      setOrderStats({ total: currentOrders.length, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue });
+
+	      console.log('✅ Dashboard state updated:', {
+	        orders: { total: currentOrders.length, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue },
+	        salesDataPoints: currentSales.length,
+	        previousSalesDataPoints: previousSalesData.length,
+	        categoryDataPoints: categoryData.length
+	      });
+	    });
+	    unsubs.push(unsubOrders);
+
+	    // Products realtime (also feeds category chart)
+	    const productsRef = collection(db, 'products');
+	    const unsubProducts = onSnapshot(productsRef, (snapshot) => {
+	      console.log('🔄 Real-time products update:', snapshot.docs.length, 'documents');
+	      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+	      const lowStockProducts = products.filter(p => (p.stock > 0 && p.stock <= (p.lowStockThreshold ?? 5))).length;
+	      const outOfStockProducts = products.filter(p => p.stock === 0 || p.stock === undefined).length;
+	      setProductStats({ total: products.length, lowStock: lowStockProducts, outOfStock: outOfStockProducts });
+
+	      const categoryGroups = products.reduce((acc: Record<string, number>, product: any) => {
+	        const category = product.category || 'Uncategorized';
+	        acc[category] = (acc[category] || 0) + 1;
+	        return acc;
+	      }, {});
+	      const categoryChartData = Object.entries(categoryGroups)
+	        .map(([label, count]) => ({ label, value: count as number }))
+	        .sort((a, b) => b.value - a.value)
+	        .slice(0, 4);
+	      setCategoryData(categoryChartData.length > 0 ? categoryChartData : [{ label: 'No Categories', value: 0 }]);
+	    });
+	    unsubs.push(unsubProducts);
+
+	    // Users realtime for customer insights
+	    const usersRef = collection(db, 'users');
+	    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+	    let totalUsersLocal = 0; let newUsersLocal = 0;
+	    const recomputeCustomerData = () => {
+	      const returningUsers = Math.max(totalUsersLocal - newUsersLocal, 0);
+	      setCustomerData([
+	        { label: 'New', value: totalUsersLocal > 0 ? Math.round((newUsersLocal / totalUsersLocal) * 100) : 0 },
+	        { label: 'Returning', value: totalUsersLocal > 0 ? Math.round((returningUsers / totalUsersLocal) * 100) : 0 }
+	      ]);
+	    };
+	    const unsubUsersAll = onSnapshot(usersRef, (snap) => { totalUsersLocal = snap.size; recomputeCustomerData(); });
+	    const unsubUsersNew = onSnapshot(query(usersRef, where('createdAt', '>=', thirtyDaysAgo)), (snap) => { newUsersLocal = snap.size; recomputeCustomerData(); });
+	    unsubs.push(unsubUsersAll, unsubUsersNew);
+
+		    // Robust customer insights subscription (fallback for mixed createdAt types)
+		    const unsubUsers = onSnapshot(usersRef, (snap) => {
+		      const users = snap.docs.map(doc => doc.data() as any);
+		      const total = users.length;
+		      const newCount = users.filter(u => {
+		        const d = normalizeDate(u.createdAt);
+		        return d && d >= thirtyDaysAgo;
+		      }).length;
+		      const returning = Math.max(total - newCount, 0);
+		      setCustomerData([
+		        { label: 'New', value: total > 0 ? Math.round((newCount / total) * 100) : 0 },
+		        { label: 'Returning', value: total > 0 ? Math.round((returning / total) * 100) : 0 }
+		      ]);
+		    });
+		    unsubs.push(unsubUsers);
+
+
+	    // Previous period snapshot (one-time via recent docs, filtered in JS)
+	    (async () => {
+	      try {
+	        const prevSnap = await getDocs(query(ordersRef, orderBy('createdAt', 'desc'), limit(1000)));
+	        const prevAll = prevSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+	        const prevOrders = prevAll.filter(o => {
+	          const d = normalizeDate(o.createdAt);
+	          return d && d >= prevStart && d <= prevEnd;
+	        });
+	        let prevSales: { label: string; value: number }[] = [];
+	        switch (globalTimeRange) {
+	          case 'day': prevSales = groupOrdersByHour(prevOrders); break;
+	          case 'week': prevSales = groupOrdersByDayOfWeek(prevOrders); break;
+	          case 'month': prevSales = groupOrdersByWeek(prevOrders); break;
+	          case 'year': prevSales = groupOrdersByMonth(prevOrders); break;
+	        }
+	        setPreviousSalesData(prevSales);
+	        const prevRev = prevOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+	        setPreviousRevenue(prevRev);
+	      } catch (e) {
+	        console.warn('Dashboard: Failed to compute previous period data', e);
+	      }
+	    })();
+
+	    return () => { unsubs.forEach(u => { try { u && u(); } catch { /* ignore */ } }); };
+	  }, [globalTimeRange, isPageLoaded]);
+
+	if (settingsLoading || !isPageLoaded) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
@@ -490,9 +947,14 @@ const DashboardContent = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-green-600">+{orderStats.pending} pending</p>
-                    <p className="text-sm text-neutral-500">${orderStats.revenue.toLocaleString()} revenue</p>
+                    <p className="text-sm text-neutral-500">{formatCurrency(orderStats.revenue)} revenue</p>
                   </div>
                 </div>
+
+	                {orderStats.total === 0 && (
+	                  <p className="mt-2 text-sm text-neutral-500">No orders in selected {getWidgetConfig('orders')?.timeRange || globalTimeRange} period.</p>
+	                )}
+
                 <Link
                   href="/admin/orders"
                   className="mt-4 inline-flex items-center text-blue-600 hover:underline"
@@ -547,11 +1009,13 @@ const DashboardContent = () => {
                 </div>
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-3xl font-bold text-neutral-900">${orderStats.revenue.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-neutral-900">{formatCurrency(orderStats.revenue)}</p>
                     <p className="text-sm text-neutral-500">Total Revenue</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-green-600">+12% from last month</p>
+                    <p className={`text-sm font-medium ${orderStats.revenue >= previousRevenue ? 'text-green-600' : 'text-red-600'}`}>
+                      {(previousRevenue > 0 ? (((orderStats.revenue - previousRevenue) / previousRevenue) * 100).toFixed(1) : '0.0')}% vs previous period
+                    </p>
                     <p className="text-sm text-neutral-500">Based on {orderStats.total} orders</p>
                   </div>
                 </div>

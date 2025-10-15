@@ -115,10 +115,13 @@ export default function ShippingSettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     try {
       await updateSettings(formData);
       showToast('Shipping settings saved successfully', 'success');
+
+      // Clear localStorage cache to force refresh
+      localStorage.removeItem('siteSettings');
     } catch (error) {
       console.error('Error saving shipping settings:', error);
       showToast('Failed to save shipping settings', 'error');

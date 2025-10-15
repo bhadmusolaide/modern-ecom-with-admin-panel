@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "dev:custom": "node server.js",
-    "prebuild": "ulimit -n 4096",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -43,6 +42,9 @@
     "firebase:process-guest-orders": "node scripts/process-guest-orders.js",
     "firebase:fix-user-roles": "node scripts/fix-user-roles.js",
     "firebase:migrate-customers": "node scripts/migrate-customers.js",
+    "firebase:fix-customer-creation": "npx ts-node scripts/fix-orders-without-customers.ts",
+    "firebase:process-customer-jobs": "npx ts-node scripts/process-customer-creation-jobs.ts",
+    "firebase:create-jobs-index": "node scripts/create-customer-jobs-index.js",
     "supabase:create-buckets": "node scripts/create-supabase-buckets.js",
     "supabase:migrate-from-s3": "node scripts/migrate-s3-to-supabase.js",
     "supabase:update-policies": "node scripts/update-supabase-policies.js",

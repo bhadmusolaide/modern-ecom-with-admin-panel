@@ -10,6 +10,7 @@ import { useActivity } from '@/lib/context/ActivityContext';
 import Section from '@/components/admin/layouts/Section';
 import { Role } from '@/lib/rbac/types';
 import { Permission } from '@/lib/rbac/permissions';
+import { safeFetch } from '@/lib/api/safeFetch';
 
 const PermissionMatrix: React.FC = () => {
   const { showToast } = useToast();
@@ -53,11 +54,7 @@ const PermissionMatrix: React.FC = () => {
 
         // Fetch roles
         console.log('PermissionMatrix: Fetching roles...');
-        const rolesResponse = await fetch('/api/admin/roles');
-        if (!rolesResponse.ok) {
-          throw new Error(`Failed to fetch roles: ${rolesResponse.status}`);
-        }
-        const rolesData = await rolesResponse.json();
+        const rolesData = await safeFetch('/api/admin/roles');
         console.log('PermissionMatrix: Roles fetched successfully:', rolesData.roles?.length || 0, 'roles');
 
         // Use default roles if API fails
@@ -87,11 +84,7 @@ const PermissionMatrix: React.FC = () => {
         // Fetch permissions
         console.log('PermissionMatrix: Fetching permissions...');
         try {
-          const permissionsResponse = await fetch('/api/admin/permissions');
-          if (!permissionsResponse.ok) {
-            throw new Error(`Failed to fetch permissions: ${permissionsResponse.status}`);
-          }
-          const permissionsData = await permissionsResponse.json();
+          const permissionsData = await safeFetch('/api/admin/permissions');
           console.log('PermissionMatrix: Permissions fetched successfully:', permissionsData.permissions?.length || 0, 'permissions');
 
           setPermissions(permissionsData.permissions);
@@ -230,19 +223,12 @@ const PermissionMatrix: React.FC = () => {
           continue;
         }
 
-        const response = await fetch(`/api/admin/roles/${role.id}/permissions`, {
+        await safeFetch(`/api/admin/roles/${role.id}/permissions`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            permissions: currentPermissions,
-            csrfToken
-          }),
+            permissions: currentPermissions
+          })
         });
-
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || `Failed to update permissions for role: ${role.name}`);
-        }
 
         // Log activity
         addActivity({

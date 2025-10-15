@@ -8,6 +8,7 @@ import { FiChevronLeft, FiLock, FiAlertTriangle, FiUserPlus } from 'react-icons/
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/lib/context/CartContext';
 import { useToast } from '@/lib/context/ToastContext';
+import { useSiteSettings } from '@/lib/context/SiteSettingsContext';
 import { validateOrderInventory } from '@/lib/firebase/inventory';
 import { InventoryStatus } from '@/lib/types';
 import { useFirebaseAuth } from '@/lib/firebase/auth/FirebaseAuthProvider';
@@ -18,6 +19,7 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const { cart, clearCart, updateCartItem } = useCart();
   const { showToast } = useToast();
+  const { settings, refreshSettings } = useSiteSettings();
   const { user, isLoading: authLoading } = useFirebaseAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidatingInventory, setIsValidatingInventory] = useState(false);
@@ -47,6 +49,11 @@ export default function CheckoutPage() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // Refresh settings on mount to ensure we have latest tax settings
+  useEffect(() => {
+    refreshSettings();
+  }, [refreshSettings]);
 
   // Validate inventory when component mounts
   useEffect(() => {
@@ -166,16 +173,16 @@ export default function CheckoutPage() {
           price: 0 // Free shipping
         },
         subtotal: cart.subtotal,
-        tax: cart.subtotal * 0.08, // 8% tax rate
+        tax: settings?.taxIncluded ? 0 : (cart.subtotal * ((settings?.taxRate || 0) / 100)),
         shippingCost: 0, // Free shipping
         discount: 0,
-        total: cart.subtotal + (cart.subtotal * 0.08),
+        total: cart.subtotal + (settings?.taxIncluded ? 0 : (cart.subtotal * ((settings?.taxRate || 0) / 100))),
         payment: {
           method: 'cash_on_delivery',
           status: 'COMPLETED',
           provider: 'BYPASS',
-          amount: cart.subtotal + (cart.subtotal * 0.08),
-          currency: 'NGN',
+          amount: cart.subtotal + (settings?.taxIncluded ? 0 : (cart.subtotal * ((settings?.taxRate || 0) / 100))),
+          currency: settings?.currencyCode || 'NGN',
           datePaid: new Date().toISOString()
         },
         status: 'PROCESSING',
@@ -300,7 +307,7 @@ export default function CheckoutPage() {
                     <h4 className="text-sm font-medium text-gray-900">{item.name}</h4>
                     <div className="flex items-center mt-1">
                       <span className="text-xs text-gray-500">
-                        {item.quantity} × {formatPrice(item.price, 'NGN', 2, 2)}
+                        {item.quantity} × {formatPrice(item.price, settings?.currencyCode || 'NGN', 2, 2)}
                       </span>
                       <span className="mx-1 text-gray-300">|</span>
                       <span className="text-xs text-gray-500">
@@ -311,7 +318,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-medium text-sm">{formatPrice(item.price * item.quantity, 'NGN', 2, 2)}</span>
+                    <span className="font-medium text-sm">{formatPrice(item.price * item.quantity, settings?.currencyCode || 'NGN', 2, 2)}</span>
                   </div>
                 </div>
               ))}
@@ -320,20 +327,25 @@ export default function CheckoutPage() {
             <div className="space-y-2 pt-4 border-t border-gray-200">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">{formatPrice(cart.subtotal, 'NGN', 2, 2)}</span>
+                <span className="font-medium">{formatPrice(cart.subtotal, settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">{formatPrice(0, 'NGN', 2, 2)}</span>
+                <span className="font-medium">{formatPrice(0, settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Tax</span>
-                <span className="font-medium">{formatPrice(cart.subtotal * 0.08, 'NGN', 2, 2)}</span>
+                <span className="text-gray-600">
+                  Tax
+                  {settings?.taxRate && settings.taxRate > 0 && !settings.taxIncluded && (
+                    <span className="text-xs text-gray-500 ml-1">({settings.taxRate}%)</span>
+                  )}
+                </span>
+                <span className="font-medium">{formatPrice(settings?.taxIncluded ? 0 : (cart.subtotal * ((settings?.taxRate || 0) / 100)), settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
               <div className="h-px bg-gray-200 my-4"></div>
               <div className="flex justify-between">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-lg font-bold">{formatPrice(cart.subtotal + cart.subtotal * 0.08, 'NGN', 2, 2)}</span>
+                <span className="text-lg font-bold">{formatPrice(cart.subtotal + (settings?.taxIncluded ? 0 : (cart.subtotal * ((settings?.taxRate || 0) / 100))), settings?.currencyCode || 'NGN', 2, 2)}</span>
               </div>
             </div>
           </div>

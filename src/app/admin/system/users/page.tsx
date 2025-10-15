@@ -190,21 +190,10 @@ function SystemUsersPage(props: { params?: Promise<any> }) {
       }
 
       // Call the login-as-user API
-      const response = await fetch('/api/admin/login-as-user', {
+      const data = await safeFetch('/api/admin/login-as-user', {
         method: 'POST',
-        headers: new Headers({
-          'Content-Type': 'application/json',
-          'x-admin-id': currentUser.id
-        }),
         body: JSON.stringify({ userId: targetUser.id })
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to login as user');
-      }
-
-      const data = await response.json();
 
       // Sign in with the custom token using FirebaseAuthProvider
       const firebaseUser = await signInWithCustomToken(data.customToken);

@@ -17,7 +17,7 @@ import {
   ShippingMethod, PaymentInfo, OrderNote, PaymentStatus, PaymentMethod
 } from '../types';
 import { generateOrderNumber } from '../utils';
-import { createCustomerFromOrder } from './createCustomerFromOrder';
+
 import { CustomerCreationRetryHandler } from './utils/customerRetry';
 
 // Collection reference
@@ -70,8 +70,8 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 
     const newOrderData = {
       ...orderData,
       orderNumber,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       status: orderData.status || OrderStatus.PENDING,
       payment: {
         ...orderData.payment,
@@ -97,37 +97,74 @@ export async function createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 
     const createdOrder = {
       id: docRef.id,
       ...newOrderData
-    } as Order;
+    } as unknown as Order;
 
-    // Create or update customer record for this order with retry logic
+    // Create or update customer record for this order using Admin SDK to bypass client security rules
     try {
-      console.log('Firebase createOrder: Creating/updating customer record from order');
-      const customerId = await CustomerCreationRetryHandler.retryCustomerCreation(
-        () => createCustomerFromOrder(docRef.id),
-        { maxAttempts: 3, delayMs: 1000 }
-      );
-      console.log(`Firebase createOrder: Successfully created/updated customer ${customerId} from order ${docRef.id}`);
+      const adminDb = getAdminFirestore();
+      const customersCollection = adminDb.collection('customers');
+      const email = newOrderData.email;
+
+      let resolvedCustomerId: string | null = null;
+      const existingSnap = await customersCollection.where('email', '==', email).limit(1).get();
+      if (!existingSnap.empty) {
+        const docSnap = existingSnap.docs[0];
+        resolvedCustomerId = docSnap.id;
+        const data = docSnap.data() || {};
+        await customersCollection.doc(resolvedCustomerId).update({
+          lastOrderDate: new Date(),
+          totalOrders: (data.totalOrders || 0) + 1,
+          totalSpent: (data.totalSpent || 0) + (newOrderData.total || 0),
+          ...(data.userId ? {} : (newOrderData.userId ? { userId: newOrderData.userId } : {})),
+          updatedAt: new Date()
+        });
+      } else {
+        const customerDocRef = await customersCollection.add({
+          email: newOrderData.email,
+          name: newOrderData.customerName || null,
+          phone: newOrderData.shippingAddress?.phone || null,
+          address: {
+            street: newOrderData.shippingAddress?.address || null,
+            city: newOrderData.shippingAddress?.city || null,
+            state: newOrderData.shippingAddress?.state || null,
+            zip: newOrderData.shippingAddress?.postalCode || null,
+            country: newOrderData.shippingAddress?.country || null,
+            phone: newOrderData.shippingAddress?.phone || null,
+          },
+          userId: newOrderData.userId || null,
+          notes: `Created from order ${createdOrder.orderNumber || createdOrder.id}`,
+          isActive: true,
+          emailVerified: false,
+          segment: [],
+          totalOrders: 1,
+          totalSpent: newOrderData.total || 0,
+          lastOrderDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        resolvedCustomerId = customerDocRef.id;
+      }
+
+      if (resolvedCustomerId) {
+        await adminDb.collection(ORDERS_COLLECTION).doc(docRef.id).update({
+          customerId: resolvedCustomerId,
+          isGuestOrder: false,
+          updatedAt: new Date()
+        });
+        console.log(`✅ Firebase createOrder: Linked order ${docRef.id} to customer ${resolvedCustomerId}`);
+      }
     } catch (customerError) {
-      console.error(`Firebase createOrder: CRITICAL ERROR - Failed to create customer from order ${docRef.id} after retries:`, customerError);
-      console.error('Firebase createOrder: Error details:', {
-        message: customerError instanceof Error ? customerError.message : 'Unknown error',
-        stack: customerError instanceof Error ? customerError.stack : 'No stack trace',
-        orderId: docRef.id,
-        orderData: {
-          email: orderData.email,
-          customerName: orderData.customerName,
-          total: orderData.total
-        }
-      });
-
-      // Schedule for later processing if immediate creation fails
-      CustomerCreationRetryHandler.scheduleCustomerCreationForLater(
-        docRef.id,
-        customerError instanceof Error ? customerError.message : 'Unknown error'
-      );
-
-      // Don't fail the order creation - the customer can be created later
-      // This ensures orders are never lost due to customer creation issues
+      console.error(`Firebase createOrder: Failed to create/link customer via Admin SDK for order ${docRef.id}:`, customerError);
+      try {
+        await CustomerCreationRetryHandler.scheduleCustomerCreationForLater(
+          docRef.id,
+          customerError instanceof Error ? customerError.message : 'Unknown error'
+        );
+        console.log(`📋 Firebase createOrder: Customer creation scheduled for later processing`);
+      } catch (scheduleError) {
+        console.error(`Firebase createOrder: Failed to schedule customer creation for later:`, scheduleError);
+      }
+      // Continue without blocking order creation
     }
 
     console.log('Firebase createOrder: Returning created order with ID:', docRef.id);

@@ -13,7 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 export default function CustomerOrderDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
 
-  const { user, isLoading: authLoading } = useFirebaseAuth();
+  const { user, isLoading: authLoading, getIdToken } = useFirebaseAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -32,14 +32,23 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
   // Fetch order details
   useEffect(() => {
     const fetchOrderDetails = async () => {
-      if (!user?.token) return;
+      if (!user) return;
 
       setIsLoading(true);
 
       try {
+        // Get fresh token from Firebase
+        const token = await getIdToken();
+
+        if (!token) {
+          showToast('Authentication required', 'error');
+          router.push('/auth/login');
+          return;
+        }
+
         const response = await fetch(`/api/orders/${id}`, {
           headers: {
-            'Authorization': `Bearer ${user.token}`
+            'Authorization': `Bearer ${token}`
           }
         });
 
@@ -49,11 +58,51 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
             router.push('/account/orders');
             return;
           }
-          throw new Error('Failed to fetch order details');
+          throw new Error(`Failed to fetch order details: ${response.status}`);
         }
 
-        const orderData = await response.json();
-        setOrder(orderData);
+        const responseData = await response.json();
+
+         // Handle different response formats (direct order or { order } wrapper)
+         const orderData = responseData.order || responseData;
+
+         if (!orderData || typeof orderData !== 'object') {
+           console.error('Invalid order data received:', responseData);
+           throw new Error('Invalid order data received from API');
+         }
+
+         console.log('Order data received:', {
+           id: orderData.id,
+           orderNumber: orderData.orderNumber,
+           total: orderData.total,
+           subtotal: orderData.subtotal,
+           shippingCost: orderData.shippingCost,
+           tax: orderData.tax,
+           hasItems: !!orderData.items,
+           itemsCount: orderData.items?.length || 0,
+           items: orderData.items,
+           createdAt: orderData.createdAt,
+           fullOrderData: orderData
+         });
+
+         // Ensure numeric fields have proper defaults to prevent NaN
+         const normalizedOrder = {
+           ...orderData,
+           subtotal: Number(orderData.subtotal) || Number(orderData.total) || 0,
+           shippingCost: Number(orderData.shippingCost) || 0,
+           tax: Number(orderData.tax) || 0,
+           total: Number(orderData.total) || 0,
+           orderNumber: orderData.orderNumber || `ORD-${orderData.id?.slice(-8) || 'UNKNOWN'}`,
+           createdAt: orderData.createdAt || new Date().toISOString(),
+           items: Array.isArray(orderData.items) ? orderData.items : [],
+           shippingAddress: orderData.shippingAddress || null,
+           payment: orderData.payment || null,
+           shippingMethod: orderData.shippingMethod || null,
+           trackingInfo: orderData.trackingInfo || null,
+           notes: orderData.notes || []
+         };
+
+        setOrder(normalizedOrder);
       } catch (error) {
         console.error('Error fetching order details:', error);
         showToast('Failed to load order details', 'error');
@@ -63,7 +112,7 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
     };
 
     fetchOrderDetails();
-  }, [id, user, router, showToast]);
+  }, [id, user, router, showToast, getIdToken]);
 
   if (authLoading || isLoading) {
     return (
@@ -275,54 +324,68 @@ export default function CustomerOrderDetailPage(props: { params: Promise<{ id: s
           <h3 className="sr-only">Items</h3>
           <ul role="list" className="divide-y divide-gray-200">
             {order.items && order.items.length > 0 ? (
-              order.items.map((item) => (
-                <li key={item.id} className="p-4 sm:p-6">
-                  <div className="flex items-center sm:items-start">
-                    <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden sm:w-24 sm:h-24">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-center object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 ml-6 text-sm">
-                      <div className="font-medium text-gray-900 sm:flex sm:justify-between">
-                        <h4>{item.name}</h4>
-                        <p className="mt-2 sm:mt-0">{formatPrice(item.price * item.quantity)}</p>
-                      </div>
-                      <div className="mt-2 flex text-gray-500">
-                        <p className="mr-4">{formatPrice(item.price)} × {item.quantity}</p>
-                        {(item.selectedColor || item.selectedSize) && (
-                          <p>
-                            {item.selectedColor && `Color: ${item.selectedColor}`}
-                            {item.selectedColor && item.selectedSize && ' / '}
-                            {item.selectedSize && `Size: ${item.selectedSize}`}
-                          </p>
+              order.items.map((item, index) => {
+                // Ensure item has required fields
+                const normalizedItem = {
+                  id: item.id || `item-${index}`,
+                  name: item.name || 'Unknown Product',
+                  price: Number(item.price) || 0,
+                  quantity: Number(item.quantity) || 1,
+                  image: item.image || null,
+                  selectedColor: item.selectedColor || null,
+                  selectedSize: item.selectedSize || null,
+                  productId: item.productId || null
+                };
+
+                return (
+                  <li key={normalizedItem.id} className="p-4 sm:p-6">
+                    <div className="flex items-center sm:items-start">
+                      <div className="flex-shrink-0 w-20 h-20 bg-gray-200 rounded-lg overflow-hidden sm:w-24 sm:h-24">
+                        {normalizedItem.image ? (
+                          <img
+                            src={normalizedItem.image}
+                            alt={normalizedItem.name}
+                            className="w-full h-full object-center object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            No image
+                          </div>
                         )}
                       </div>
-                      {item.productId && (
-                        <div className="mt-2">
-                          <Link
-                            href={`/products/${item.productId}`}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-500"
-                          >
-                            View Product
-                          </Link>
+                      <div className="flex-1 ml-6 text-sm">
+                        <div className="font-medium text-gray-900 sm:flex sm:justify-between">
+                          <h4>{normalizedItem.name}</h4>
+                          <p className="mt-2 sm:mt-0">{formatPrice(normalizedItem.price * normalizedItem.quantity)}</p>
                         </div>
-                      )}
+                        <div className="mt-2 flex text-gray-500">
+                          <p className="mr-4">{formatPrice(normalizedItem.price)} × {normalizedItem.quantity}</p>
+                          {(normalizedItem.selectedColor || normalizedItem.selectedSize) && (
+                            <p>
+                              {normalizedItem.selectedColor && `Color: ${normalizedItem.selectedColor}`}
+                              {normalizedItem.selectedColor && normalizedItem.selectedSize && ' / '}
+                              {normalizedItem.selectedSize && `Size: ${normalizedItem.selectedSize}`}
+                            </p>
+                          )}
+                        </div>
+                        {normalizedItem.productId && (
+                          <div className="mt-2">
+                            <Link
+                              href={`/products/${normalizedItem.productId}`}
+                              className="text-sm font-medium text-primary-600 hover:text-primary-500"
+                            >
+                              View Product
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))
+                  </li>
+                );
+              })
             ) : (
               <li className="p-4 sm:p-6">
-                <p>No items found in this order.</p>
+                <p className="text-gray-500">No items found in this order.</p>
               </li>
             )}
           </ul>

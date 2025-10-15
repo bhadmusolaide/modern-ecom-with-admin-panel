@@ -159,8 +159,8 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     socialLinks: [],
     metaTitle: 'Yours Ecommerce - Modern Unisex Boutique',
     metaDescription: 'Discover our collection of timeless, sustainable unisex fashion pieces designed for everyone.',
-    currencyCode: 'USD', // Supported currencies include USD, EUR, GBP, CAD, AUD, JPY, NGN
-    currencySymbol: '$', // For NGN, use '₦'
+    currencyCode: 'NGN', // Supported currencies include USD, EUR, GBP, CAD, AUD, JPY, NGN
+    currencySymbol: '₦', // For NGN, use '₦'
     paymentMethods: [],
     stripeEnabled: false,
     stripePublicKey: null,
@@ -304,8 +304,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     let timeoutId: NodeJS.Timeout | null = null;
 
     try {
-      console.log('Fetching site settings...');
-
       // Add a timeout to the fetch request
       const controller = new AbortController();
       timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -325,8 +323,13 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
         // Get the raw response text first for debugging
         responseText = await response.text();
-        console.log('Raw API response:', responseText);
       } catch (fetchError) {
+        // Ignore AbortError - it's expected when component unmounts or refresh is called
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.log('Settings fetch was cancelled');
+          return;
+        }
+
         console.error('Error fetching site settings:', fetchError);
 
         // Try to load settings from localStorage as a fallback
@@ -374,7 +377,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log('Site settings fetched successfully:', Object.keys(data));
       } catch (parseError) {
         console.error('Error parsing site settings JSON:', parseError);
         console.error('Invalid JSON response:', responseText);
@@ -479,7 +481,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Cache the settings in localStorage for fallback
       try {
         localStorage.setItem('siteSettings', JSON.stringify(data));
-        console.log('Settings cached in localStorage');
       } catch (cacheError) {
         console.error('Error caching settings in localStorage:', cacheError);
       }
@@ -510,8 +511,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     const originalSettings = { ...settings };
 
     try {
-      console.log('Updating settings with:', Object.keys(newSettings));
-
       // Merge the new settings with existing settings
       const updatedSettings = {
         ...settings,
@@ -582,7 +581,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
 
       // Get the updated settings from the response
       const responseData = await response.json();
-      console.log('Settings updated successfully:', Object.keys(responseData));
 
       // Update local state with the response data
       setSettings(responseData);
@@ -590,7 +588,6 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       // Cache the settings in localStorage for fallback
       try {
         localStorage.setItem('siteSettings', JSON.stringify(responseData));
-        console.log('Settings cached in localStorage');
       } catch (cacheError) {
         console.error('Error caching settings in localStorage:', cacheError);
       }

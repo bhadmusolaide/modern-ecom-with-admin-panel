@@ -160,8 +160,36 @@ export default function AdminHeader({ toggleSidebar, toggleMobileMenu }: AdminHe
     );
   };
 
+  // Check if AdminImpersonationBanner is present
+  const [hasImpersonationBanner, setHasImpersonationBanner] = useState(false);
+
+  useEffect(() => {
+    const checkImpersonationBanner = () => {
+      try {
+        const storedSession = localStorage.getItem('adminSession');
+        if (storedSession) {
+          const session = JSON.parse(storedSession);
+          // Only show banner if current user is not the admin
+          setHasImpersonationBanner(!!(session && user && user.id !== session.id));
+        } else {
+          setHasImpersonationBanner(false);
+        }
+      } catch (error) {
+        setHasImpersonationBanner(false);
+      }
+    };
+
+    checkImpersonationBanner();
+
+    // Listen for storage changes (in case banner state changes)
+    const handleStorageChange = () => checkImpersonationBanner();
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user]);
+
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 h-16 px-6 flex items-center">
+    <header className={`bg-white dark:bg-gray-800 border-b border-neutral-200 dark:border-gray-700 h-16 px-6 flex items-center ${hasImpersonationBanner ? 'mt-12' : ''}`}>
       <div className="flex items-center justify-between w-full">
         <div className="flex items-center">
           <button

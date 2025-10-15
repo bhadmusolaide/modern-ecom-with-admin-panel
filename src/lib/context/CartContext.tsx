@@ -105,7 +105,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
           const parsedCart = JSON.parse(savedCart);
-          setCart(parsedCart);
+          // Recompute totals from items to avoid stale persisted totals
+          const items = Array.isArray(parsedCart.items) ? parsedCart.items : [];
+          const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.price) * Number(item.quantity || 0)), 0);
+          const total = subtotal;
+          const itemCount = items.reduce((count: number, item: any) => count + Number(item.quantity || 0), 0);
+          setCart({ items, subtotal, total, itemCount });
         }
       } catch (error) {
         console.error('Error loading cart from localStorage:', error);
@@ -287,12 +292,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         estimatedDelivery: checkoutData.shippingMethod.estimatedDelivery
       };
 
-      // Calculate tax (example: 8% of subtotal)
-      const taxRate = 0.08;
-      const tax = Math.round(cart.subtotal * taxRate * 100) / 100;
+      // Calculate tax (use 0 here to avoid inconsistencies; tax is handled at checkout UI based on admin settings)
+      const tax = 0;
 
-      // Calculate total
-      const total = cart.subtotal + tax + shippingMethod.price;
+      // Calculate total (subtotal + shipping only; tax handled elsewhere)
+      const total = cart.subtotal + shippingMethod.price;
 
       // Map payment method
       let paymentMethodEnum: PaymentMethod;
