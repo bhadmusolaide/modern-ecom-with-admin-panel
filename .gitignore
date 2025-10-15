@@ -95,3 +95,35 @@ next-env.d.ts
 
 # Firebase service account key
 firebase-service-account.json
+
+# Windows crash dumps
+*.stackdump
+
+# User uploaded files
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Temporary files
+temp/*
+!temp/.gitkeep
+
+# Test screenshots and artifacts
+cypress/screenshots/*
+cypress/videos/*
+test-results/*
+coverage/*
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Backup files
+*.backup

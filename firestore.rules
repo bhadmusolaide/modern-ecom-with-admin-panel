@@ -1,14 +1,173 @@
-// TEMPORARY DEBUGGING RULES - NO RESTRICTIONS
-// These rules allow unrestricted access for debugging customer creation issues
-// WARNING: Remove these and restore proper security rules after debugging
-
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
-    // TEMPORARY: Allow ALL operations for ALL users (including unauthenticated)
-    // This removes all security restrictions to test if permissions are the issue
-    match /{document=**} {
-      allow read, write, create, update, delete: if true;
-    }
-  }
+ match /databases/{database}/documents {
+
+   // Helper functions
+   function isAuthenticated() {
+     return request.auth != null;
+   }
+
+   function isAdmin() {
+     return isAuthenticated() &&
+       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+   }
+
+   function isOwner(userId) {
+     return isAuthenticated() && request.auth.uid == userId;
+   }
+
+   function isOwnerOrAdmin(userId) {
+     return isOwner(userId) || isAdmin();
+   }
+
+   // Public site settings - readable by all, writable by admins only
+   match /site-settings/{document} {
+     allow read: if true;
+     allow write: if isAdmin();
+     allow create, update, delete: if isAdmin();
+   }
+
+   // Homepage sections - readable by all, writable by admins only
+   match /homepage-sections/{document} {
+     allow read: if true;
+     allow write: if isAdmin();
+     allow create, update, delete: if isAdmin();
+   }
+
+   // Products - readable by all, writable by admins only
+   match /products/{document} {
+     allow read: if true;
+     allow write: if isAdmin();
+     allow create, update, delete: if isAdmin();
+   }
+
+   // Categories - readable by all, writable by admins only
+   match /categories/{document} {
+     allow read: if true;
+     allow write: if isAdmin();
+     allow create, update, delete: if isAdmin();
+   }
+
+   // Collections - readable by all, writable by admins only
+   match /collections/{document} {
+     allow read: if true;
+     allow write: if isAdmin();
+     allow create, update, delete: if isAdmin();
+   }
+
+   // Users - readable/writable by self or admin, full admin access
+   match /users/{userId} {
+     allow read: if isOwnerOrAdmin(userId);
+     allow write: if isOwnerOrAdmin(userId);
+     allow create: if isAuthenticated();
+     allow update: if isOwnerOrAdmin(userId);
+     allow delete: if isAdmin();
+   }
+
+   // Orders - readable by owner or admin, writable by admin or system
+   match /orders/{orderId} {
+     allow read: if isAuthenticated() &&
+       (exists(/databases/$(database)/documents/orders/$(orderId)) &&
+        get(/databases/$(database)/documents/orders/$(orderId)).data.userId == request.auth.uid) ||
+       isAdmin();
+     allow write: if isAdmin();
+     allow create: if isAuthenticated();
+     allow update: if isAdmin() ||
+       (isAuthenticated() && request.auth.uid == resource.data.userId);
+     allow delete: if isAdmin();
+   }
+
+   // Customer segments - admin only
+   match /customer-segments/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // Activity logs - admin only
+   match /activity/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // System logs - admin only
+   match /system-logs/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // Backups - admin only
+   match /backups/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // Admin settings - admin only
+   match /admin-settings/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // FAQ - readable by all, writable by admins
+   match /faq/{document} {
+     allow read: if true;
+     allow write, create, update, delete: if isAdmin();
+   }
+
+   // Testimonials - readable by all, writable by admins
+   match /testimonials/{document} {
+     allow read: if true;
+     allow write, create, update, delete: if isAdmin();
+   }
+
+   // Contact messages - admin only (privacy protection)
+   match /contact-messages/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // Notifications - readable by owner or admin
+   match /notifications/{document} {
+     allow read: if isAuthenticated() &&
+       (resource.data.userId == request.auth.uid || isAdmin());
+     allow write, create: if isAdmin();
+     allow update: if isOwnerOrAdmin(resource.data.userId);
+     allow delete: if isAdmin();
+   }
+
+   // Wishlist - readable/writable by owner or admin
+   match /wishlist/{document} {
+     allow read: if isOwnerOrAdmin(resource.data.userId);
+     allow write, create, update, delete: if isOwnerOrAdmin(resource.data.userId);
+   }
+
+   // Cart - readable/writable by owner or admin
+   match /cart/{document} {
+     allow read: if isOwnerOrAdmin(resource.data.userId);
+     allow write, create, update, delete: if isOwnerOrAdmin(resource.data.userId);
+   }
+
+   // Payment methods - readable/writable by owner or admin
+   match /payment-methods/{document} {
+     allow read: if isOwnerOrAdmin(resource.data.userId);
+     allow write, create, update, delete: if isOwnerOrAdmin(resource.data.userId);
+   }
+
+   // Reviews - readable by all, writable by authenticated users for their own reviews
+   match /reviews/{document} {
+     allow read: if true;
+     allow create: if isAuthenticated();
+     allow write, update, delete: if isOwnerOrAdmin(resource.data.userId);
+   }
+
+   // Coupons - readable by authenticated users, writable by admins
+   match /coupons/{document} {
+     allow read: if isAuthenticated();
+     allow write, create, update, delete: if isAdmin();
+   }
+
+   // Admin analytics - admin only
+   match /analytics/{document} {
+     allow read, write, create, update, delete: if isAdmin();
+   }
+
+   // Default deny rule for any other collections
+   match /{document=**} {
+     allow read, write: if false;
+   }
+ }
 }
